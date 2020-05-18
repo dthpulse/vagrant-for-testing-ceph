@@ -5,46 +5,57 @@
 [//]: # (the new TOC will appear on stdout: the expectation is that the maintainer will do the rest.)
 
 * [Vagrant SES build validation](#vagrant-ses-build-validation)
-   * [Set-up Vagrang server](#set-up-vagrang-server)
-      * [Requiered packages](#requiered-packages)
-      * [Install SUSE certificate](#install-suse-certificate)
-      * [Configure QEMU to run processes as root user](#configure-qemu-to-run-processes-as-root-user)
-      * [Changing Libvirt default pool location](#changing-libvirt-default-pool-location)
-      * [Enable vagrant-libvirt network autostart](#enable-vagrant-libvirt-network-autostart)
-      * [Enable symbolic links in Apache DocumentRoot](#enable-symbolic-links-in-apache-documentroot)
-      * [Create repo files and repo directories](#create-repo-files-and-repo-directories)
-      * [Enable and start services:](#enable-and-start-services)
-      * [Firewall](#firewall)
-      * [Setting up Docker registry cache](#setting-up-docker-registry-cache)
-      * [Change Vagrant home directory location](#change-vagrant-home-directory-location)
-      * [NFS Server settings](#nfs-server-settings)
-      * [Additional server configuration for testing SES cluster with mixed architecture](#additional-server-configuration-for-testing-ses-cluster-with-mixed-architecture)
-   * [Preparing for Build Validation tests](#preparing-for-build-validation-tests)
-      * [Creating Vagrant Box](#creating-vagrant-box)
-         * [Download and mount ISOs](#download-and-mount-isos)
-         * [QEMU VM installation for Vagrant box with autoyast file](#qemu-vm-installation-for-vagrant-box-with-autoyast-file)
-            * [x86_64](#x86_64)
-            * [AARCH64 and Mixed](#aarch64-and-mixed)
-         * [QEMU VM installation for Vagrant box manually](#qemu-vm-installation-for-vagrant-box-manually)
-            * [x86_64](#x86_64-1)
-            * [AARCH64 and Mixed](#aarch64-and-mixed-1)
-         * [QEMU VM installation for Vagrant box - Clients](#qemu-vm-installation-for-vagrant-box---clients)
-         * [Put image into the Vagrant boxes](#put-image-into-the-vagrant-boxes)
-   * [Vagrant with OpenStack](#vagrant-with-openstack)
-      * [Preparing for Build Validation test with OpenStack](#preparing-for-build-validation-test-with-openstack)
-         * [Creating OpenStack image](#creating-openstack-image)
-   * [Running Build Validation tests](#running-build-validation-tests)
-      * [Build Validation on x86_64, AARCH64 and Mixed](#build-validation-on-x86_64-aarch64-and-mixed)
-         * [Running tests with build validation script](#running-tests-with-build-validation-script)
-         * [Running tests just with Vagrant](#running-tests-just-with-vagrant)
-         * [Destroying project on AARCH64](#destroying-project-on-aarch64)
-      * [Running tests on OpenStack](#running-tests-on-openstack)
+    * [Set-up Vagrant server](#set-up-vagrant-server)
+       * [Requiered packages](#requiered-packages)
+       * [Install SUSE certificate](#install-suse-certificate)
+       * [Configure QEMU to run processes as root user](#configure-qemu-to-run-processes-as-root-user)
+       * [Changing Libvirt default pool location](#changing-libvirt-default-pool-location)
+       * [Enable vagrant-libvirt network autostart](#enable-vagrant-libvirt-network-autostart)
+       * [Enable symbolic links in Apache DocumentRoot](#enable-symbolic-links-in-apache-documentroot)
+       * [Create repo files and repo directories](#create-repo-files-and-repo-directories)
+       * [Enable and start services:](#enable-and-start-services)
+       * [Firewall](#firewall)
+       * [SSH keys](#ssh-keys)
+       * [Setting up Docker registry cache](#setting-up-docker-registry-cache)
+       * [Change Vagrant home directory location](#change-vagrant-home-directory-location)
+       * [NFS Server settings](#nfs-server-settings)
+       * [Additional server configuration for testing SES cluster with mixed architecture](#additional-server-configuration-for-testing-ses-cluster-with-mixed-architecture)
+    * [Preparing for Build Validation tests](#preparing-for-build-validation-tests)
+       * [Creating Vagrant Box](#creating-vagrant-box)
+          * [Download and mount ISOs](#download-and-mount-isos)
+          * [QEMU VM installation for Vagrant box with autoyast file](#qemu-vm-installation-for-vagrant-box-with-autoyast-file)
+             * [x86_64](#x86_64)
+             * [AARCH64 and Mixed](#aarch64-and-mixed)
+          * [QEMU VM installation for Vagrant box manually](#qemu-vm-installation-for-vagrant-box-manually)
+             * [x86_64](#x86_64-1)
+             * [AARCH64 and Mixed](#aarch64-and-mixed-1)
+          * [QEMU VM installation for Vagrant box Clients](#qemu-vm-installation-for-vagrant-box-clients)
+          * [Put image into the Vagrant boxes](#put-image-into-the-vagrant-boxes)
+    * [Vagrant with OpenStack](#vagrant-with-openstack)
+       * [Preparing for Build Validation test with OpenStack](#preparing-for-build-validation-test-with-openstack)
+          * [Creating OpenStack image](#creating-openstack-image)
+    * [Running Build Validation tests](#running-build-validation-tests)
+       * [Build Validation on x86_64, AARCH64 and Mixed](#build-validation-on-x86_64-aarch64-and-mixed)
+          * [Running tests with build validation script](#running-tests-with-build-validation-script)
+          * [Running tests just with Vagrant](#running-tests-just-with-vagrant)
+          * [Destroying project on AARCH64 or Mixed](#destroying-project-on-aarch64-or-mixed)
+       * [Running tests on OpenStack](#running-tests-on-openstack)
 
 ## Vagrant SES build validation
 
 Using native Vagrant files to build cluster with SES and running build validaion on it.
 
-### Set-up Vagrang server
+We have already everything ready and using server jupiter.qa.suse.cz for x86_64 or thunderx7.arch.suse.de for aarch64 testing.
+
+To login to the servers as root user use storage-automation key.
+
+For Build Validation it's enough to follow steps described in:
+
+- [Preparing for Build Validation tests](#preparing-for-build-validation-tests)
+
+- [Running Build Validation tests](#running-build-validation-tests)
+
+### Set-up Vagrant server
 
 #### Requiered packages
 
@@ -225,7 +236,9 @@ sed -i '/REJECT/d' /etc/iptables.conf
 iptables-resore /etc/iptables.conf
 ```
 
-We have to restore these rules after every system or libvirt service reboot.
+#### SSH keys
+
+Vagrant is looking for *storage-automation* public and private keys in `/root/.ssh/` path. If they are placed there we will be able to login without password to our deployed SES cluster. Thanks to *vagrant-hostsupdater* plugin we can use hostnames we defined in YAML file.
 
 #### Setting up Docker registry cache
 
@@ -356,7 +369,7 @@ install these packages:
 zypper in ovmf qemu-arm
 ```
 
-in the folder [libvirt_files_for_aarch64_emulation](https://gitlab.suse.de/denispolom/vagrant_ses/-/tree/dpdev/mixed_arch%2Flibvirt_files_for_aarch64_emulation) are files that we have to copy in to the following locations:
+in the folder [libvirt_files_for_aarch64_emulation](https://gitlab.suse.de/denispolom/vagrant_ses/-/tree/master/mixed_arch/libvirt_files_for_aarch64_emulation) are files that we have to copy in to the following locations:
 
 ```bash
 /usr/share/qemu/aavmf-aarch64-code.bin
@@ -436,6 +449,8 @@ enabled=1
 
 ### Preparing for Build Validation tests
 
+**Steps in this chapter are not needed if you are going to use _build_validation.sh_ script. Script can do it for you automatically**
+
 #### Creating Vagrant Box
 
 In this example we are going to use SLE-15-SP2-Snapshot15 and SES7-M10.
@@ -488,7 +503,7 @@ mount /qemu/iso/SUSE-Enterprise-Storage-7-DVD-aarch64-Milestone10-Media1.iso /sr
 
 ###### x86_64
 
-Insert [autoyast file](https://gitlab.suse.de/denispolom/vagrant_ses/-/blob/dpdev/autoyast/autoyast_intel.xml) into Apache DocumetnRoot directory
+Insert [autoyast file](https://gitlab.suse.de/denispolom/vagrant_ses/-/blob/master/autoyast/autoyast_intel.xml) into Apache DocumetnRoot directory
 
 ```
 cp autoyast_intel.xml /srv/www/htdocs
@@ -535,7 +550,7 @@ Continue with [Put image into the Vagrant boxes](#put-image-into-the-vagrant-box
 
 ###### AARCH64 and Mixed
 
-Insert [autoyast file](https://gitlab.suse.de/denispolom/vagrant_ses/-/blob/dpdev/autoyast/autoyast_aarch64.xml) into Apache DocumetnRoot directory
+Insert [autoyast file](https://gitlab.suse.de/denispolom/vagrant_ses/-/blob/master/autoyast/autoyast_aarch64.xml) into Apache DocumetnRoot directory
 
 ```
 cp autoyast_intel.xml /srv/www/htdocs
@@ -738,7 +753,7 @@ After VM shutdown **DO NOT START IT AGAIN**
 
 Continue with [Put image into the Vagrant boxes](#put-image-into-the-vagrant-boxes)
 
-##### QEMU VM installation for Vagrant box - Clients
+##### QEMU VM installation for Vagrant box Clients
 
 Make sure OS image is mounted under */srv/www/htdocs/client*
 
@@ -917,6 +932,23 @@ There is a server *ecp-registry.openstack.local* (IP 10.86.1.251, login with sto
 
 #### Preparing for Build Validation test with OpenStack
 
+We need to patch [cinder files](https://gitlab.suse.de/denispolom/vagrant_ses/-/tree/master/openstack%2Fcinder) to work with ECP.
+
+Go to your vagrant home directory and run
+
+```
+cd .vagrant.d
+find . -name cinder.rb
+```
+
+replace the file with [cinder.rb](https://gitlab.suse.de/denispolom/vagrant_ses/-/tree/master/openstack%2Fcinder) 
+
+same for [cinder_spec.rb](https://gitlab.suse.de/denispolom/vagrant_ses/-/tree/master/openstack%2Fcinder)
+
+```
+find . -name cinder_spec.rb
+```
+
 ##### Creating OpenStack image
 
 Download and source RC file from OpenStack.
@@ -1019,9 +1051,6 @@ If we are going to use `build_validation.sh` script then only these scripts need
 master_sh:
         - hosts_file_correction.sh
         - deploy_ses.sh
-
-monitor_sh:
-        - configure_ses.sh
 ```
 
 All other scripts are handled by *build_validation.sh* script
@@ -1031,7 +1060,32 @@ In most cases nothing more needs to be edited.
 Run test:
 
 ```
-./build_validation.sh SES7_Build_Validation 2>&1 | tee -a logfile.log
+# ./build_validation.sh -h
+
+  usage: ./build_validation.sh --help
+  build_validation.sh [arguments]
+
+  arguments:
+    --vagrantfile            VAGRANTFILE
+    --ses-only               deploys only SES without running BV test scripts
+    --destroy                destroys project (vagrant destroy -f)
+    --all-scripts            runs all BV scripts under ./scripts directory
+    --only-script            runs only specified script
+    --existing               runs BV scripts on existing cluster
+    --only-salt-cluster      deploys cluster with salt
+    --vagrant-box            vagrant box name. Don't use with option --sle-slp-dir.
+    --sle-slp-dir            directory of SLE Full SLP (example: SLE-15-SP2-Full-Snapshot16)
+    --ses-slp-dir            directory of SES SLP (example: SUSE-Enterprise-Storage-7-Milestone11)
+    --destroy-before-deploy  destroys existing cluster before deployment (useful for Jenkins)
+
+```
+
+Example:
+
+```
+./build_validation.sh --vagrantfile SES7_Build_validation --destroy-before-deploy \
+--all-scripts --sle-slp-dir SLE-15-SP2-Full-Snapshot16 \
+--ses-slp-dir SUSE-Enterprise-Storage-7-Milestone11
 ```
 
 What is script doing:

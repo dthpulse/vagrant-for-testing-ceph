@@ -5,14 +5,19 @@
     <add_on_others config:type="list"/>
     <add_on_products config:type="list">
       <listentry>
-        <media_url><![CDATA[http://192.168.122.1/current_os]]></media_url>
+        <media_url><![CDATA[REPLACE_ME]]></media_url>
         <product>sle-module-basesystem</product>
         <product_dir>/Module-Basesystem</product_dir>
       </listentry>
       <listentry>
-        <media_url><![CDATA[http://192.168.122.1/current_os]]></media_url>
+        <media_url><![CDATA[REPLACE_ME]]></media_url>
         <product>sle-module-server-applications</product>
         <product_dir>/Module-Server-Applications</product_dir>
+      </listentry>
+      <listentry>
+        <media_url><![CDATA[REPLACE_ME]]></media_url>
+        <product>sle-module-legacy</product>
+        <product_dir>/Module-Legacy</product_dir>
       </listentry>
     </add_on_products>
   </add-on>
