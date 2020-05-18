@@ -1,0 +1,1 @@
+../../bin/build_validation.sh

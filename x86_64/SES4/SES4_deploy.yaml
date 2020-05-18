@@ -1,0 +1,196 @@
+##################################
+### SES cluster global options ###
+##################################
+
+# Vagrant box to be used for SES cluster
+ses_cl_box: sles12sp2
+
+# If set to 'true' Ceph will be deployed
+# If set to 'false' only servers will be deployed
+deploy_ses: true
+
+# SLE registration key
+# You can set SLE registration key from CLI as system environment variable:
+# export sle_reg_key="28738@C3P1G-EXe-eLq7-8eoqehc57v"
+# If kept empty SLE servers will not be registered and updated
+sle_reg_key:
+
+# SES registration key
+# You can set SES registration key from CLI as system environment variable:
+# export ses_reg_key="20676@C313G01-S3S-698fjh105"
+# If kept empty Ceph will not be deployed (valid for SCC repos)
+ses_reg_key:
+
+# NTP server
+# if kept empty then ntp.suse.cz is configured on the VMs
+ntp_server: ntp.suse.cz
+
+# Allow vendor change
+# In this case the package manager will not ask permission to change vendor for packages, and updating will just install whatever package has the highest version number, regardless of where it comes from.
+allow_vendor_change: true
+
+
+# SES deployment commands - will run if 'deploy_ses:true'
+# master packages must include deepsea, salt-master and salt-minion.
+# minions packages must include salt-minion
+# if you need to reboot the node on some step, just use 'reboot'. Vagrant
+# will handle it.
+master_cmds:
+        - zypper -q --no-gpg-checks --gpg-auto-import-keys dup -y
+        - reboot
+        - systemctl enable salt-master salt-minion
+        - systemctl start salt-master salt-minion; sleep 120
+        - salt-key -Ay; sleep 60
+        - salt-run state.orch ceph.stage.0
+        - salt-run state.orch ceph.stage.1
+        - salt-run state.orch ceph.stage.2; sleep 60
+        - salt-run state.orch ceph.stage.3
+        - salt-run state.orch ceph.stage.4
+        - ceph osd pool rm rbd rbd --yes-i-really-really-mean-it
+
+minions_cmds:
+        - zypper -q --no-gpg-checks --gpg-auto-import-keys dup -y
+        - reboot
+        - systemctl enable salt-minion
+        - until nc -z master 4505; do sleep 1;done ; systemctl start salt-minion # wait for mster to be started. You have to define master hostname here.
+
+# scc_repos and custom_repos shouldn't be used together !
+# SCC SES repositories
+use_scc_repos: true
+
+# What version of SES to install from SCC repositories.
+# Number that is valid is shown by 'SUSEConnect --list-extensions'
+# command: ses/5/x86_64 
+# Legal values are numbers like 4, 5, 6
+ses_version_on_scc: "4"
+
+# Custom SES repositories
+# You can set SES repositories from CLI as system environment variable:
+# export custom_repos="http://192.168.122.1/ses5/m9/1
+# http://192.168.122.1/ses5/m9/2
+# http://192.168.122.1/ses5/m9/3"
+# then Vagrant will prefer them instead of those set up in yaml file.
+use_custom_repos: false
+custom_repos:
+        - http://192.168.122.1/ses4/1
+        - http://192.168.122.1/ses4/2
+        - http://192.168.122.1/ses4/3
+
+# System services we want to be enables / disabled on fresh deployed nodes
+enabled_services:
+        - ntpd 
+
+disabled_services: 
+        - SuSEfirewall2
+
+# whether to use OSD encryption or not
+encryption: false
+
+##########################
+### Role based options ###
+##########################
+
+# Master node
+master:
+        hostname: ses4-deploy-master
+        domain: sestest
+        ip: '192.168.122.11'
+        number: 1
+        memory: 8196 # kB
+        cpus: 2
+        packages: # To use it both SLE and SES has to be registered. Otherwise keep it empty.
+                - deepsea
+                - salt
+                - salt-minion
+
+# Minion nodes
+# OSD nodes
+osd_node: 
+        hostname: ses4-deploy-osd-node # Global hostname. Vagrant will add number to the end.
+        domain: sestest
+        ip: 192.168.122.30 # Starting from ... . Vagrant will increase by 1 for each osd_node.
+        number: 5 # number of OSD nodes
+        memory: 2048 # kB
+        osds_number: 2
+        osd_size: 10 # G
+        cpus: 2
+        packages: # To use it both SLE and SES has to be registered. Otherwise keep it empty.
+                - salt-minion
+
+# Monitoring nodes
+monitor: 
+        hostname: ses4-deploy-monitor # Global hostname. Vagrant will add number to the end.
+        domain: sestest
+        ip: 192.168.122.160 # Starting from ... . Vagrant will increase by 1 for each osd_node.
+        number: 3 # number of Monitor nodes
+        memory: 1024 # kB
+        cpus: 1
+        packages: # To use it both SLE and SES has to be registered. Otherwise keep it empty.
+                - salt-minion
+
+####################################
+### Bash scripts to run on nodes ###
+####################################
+
+# Based on roles                  
+                  
+master_sh:
+        # - ./scripts/ses_deploy_oA.sh
+        # - ./scripts/ses_ceph_health_cmds.sh
+        # - ./scripts/ses_tuned.sh
+        # - ./scripts/ses_replace_disk.sh
+        # - ./scripts/ses6_disk_fault_injection.sh
+        # - ./scripts/ses_rack_dc_region_unavailability.sh
+        # - ./scripts/ses_happy_path_scenario.sh
+        # - ./scripts/ses_ceph_osd_tiering.sh
+        # - ./scripts/ses_erasure_code_profile.sh
+        # - ./scripts/ses_CephFS_test-mount_CephFS.sh
+        # - ./scripts/ses_install_rgw.sh
+        # - ./scripts/ses_install_nfs_ganesha.sh
+        # - ./scripts/ses_iSCSI_gw-LUN_map.sh
+        # - ./scripts/ses_monitor_failover.sh
+        # - ./scripts/ses_rbd_image.sh
+        # - ./scripts/ses_removing_OSD.sh
+        # - ./scripts/ses_stop_osds_deamon.sh
+        # - ./scripts/clients_rbd_persistent.sh
+        # - ./scripts/clients_nfs_cephfs_test.sh
+        # - ./scripts/clients_nfs_rgw_test.sh
+        # - ./scripts/ses_uninstall_ceph.sh
+          
+monitor_sh:
+#        - kill_monitor.sh
+          
+osd_node_sh:
+#        - kill_osd.sh
+
+clients_sh:
+#        - whatever.sh
+
+#################################################
+### List of clients to be deployed by Vagrant ###
+#################################################
+
+# list of clients (vagrant box name)
+# client hostname will be identical with its vagrant box name
+# For clients is reservated the ip address range >= xxx.xxx.xxx.220
+clients_last_octet: 230
+clients:
+        # - sles12sp3
+        # - sle15
+        # - sles-es74
+        # - sles-es75
+        # - ubuntu164
+        # - ubuntu184
+        # - fedora28
+
+# repositories for clients needed for 'ceph-common' package 
+# boolean value is specified for OS that contains preconfigured repositories
+# in case of sles12sp3 and sle15 it will register the server, but only if 'sle_reg_key' is defined
+# 'sle_repo' is used for all SLE servers
+# 'ubuntu_repo' is used for all Ubuntu servers
+# in case of sles-es74 and sles-es75 it will attach the iso to VM cdrom drive and mount it to /mnt
+# if you will add your own vagrant box here and want to specify repos for it, you have to adjust Vagrantfile as well
+sle_repo: true
+ubuntu_repo: true
+sles-es74_repo: /qemu/iso/SLES-ES-7.4-x86_64-DVD.iso
+sles-es75_repo: /qemu/iso/SLES-ES-7.5-x86_64-DVD.iso

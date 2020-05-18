@@ -1,0 +1,1 @@
+../../bin/destroy_project.sh

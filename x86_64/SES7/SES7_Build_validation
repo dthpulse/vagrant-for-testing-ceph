@@ -1,0 +1,421 @@
+#!/usr/bin/env ruby
+
+require './vagrant-provision-reboot-plugin'
+require 'yaml'
+require 'net/ssh'
+require 'fileutils'
+
+$project_name = 'SES7_Build_validation'
+$project_dir = "#{$project_name}" + '-files'
+FileUtils.mkdir_p $project_name + '-files'
+
+################################################
+### Export project directory to the world    ###
+### will prevent us from some Vagrant errors ###
+################################################
+system("test \"`grep \"$(pwd) \\*\" /etc/exports`\" || echo \"$(pwd) \*(rw,sync,wdelay,hide,no_subtree_check,anonuid=0,anongid=0,sec=sys,secure,root_squash,all_squash)\" >> /etc/exports")
+system("exportfs -a > /dev/null 2>&1")
+
+####################################
+### generate ssh keys for master ###
+####################################
+$key = OpenSSL::PKey::RSA.new 2048
+type = $key.ssh_type
+data = [ $key.to_blob ].pack('m0')
+$pub_key = "#{type} #{data}"
+
+###################
+### config yaml ###
+###################
+if !ENV['config_yaml'].nil?
+    $config_yaml = YAML::load_file(ENV['config_yaml'])
+else
+    $config_yaml = YAML::load_file($project_name + '.yaml')
+end
+
+#############################################
+### Module definition for custom commands ###
+#############################################
+def custom_cmds(config_node, ip_address, host_fqdn, host_alias, node_packages, role_cmds)
+    config_node.vm.hostname = host_fqdn
+    config_node.vm.network "private_network", ip: "#{ip_address}"
+    
+    # set TERM env on guests
+    config_node.vm.provision :shell, :inline => "echo 'export TERM=xterm-256color' > /etc/profile.d/vars.sh"
+
+    # reboot wicked to keep hostname
+    config_node.vm.provision :shell, :inline => "echo 'rebooting wicked'; test -f /usr/lib/systemd/system/wicked.service && systemctl restart wicked"
+    
+    # allow vendor change
+    if $config_yaml['allow_vendor_change']
+        config_node.vm.provision :shell, :inline => "echo 'allowing vendor change'; echo \"solver.allowVendorChange = true\" >> /etc/zypp/zypp.conf"
+    end
+    
+    # upgrade and reboot host
+    if !$config_yaml['sle_reg_key'].nil?
+        config_node.vm.provision :shell, :inline => "echo 'Registering server to SCC'; SUSEConnect --de-register; SUSEConnect --cleanup; SUSEConnect -r #{$config_yaml['sle_reg_key']}"
+       	config_node.vm.provision :shell, :inline => "echo 'zypper -q --no-gpg-checks --gpg-auto-import-keys dup -y'; zypper -q --no-gpg-checks --gpg-auto-import-keys dup -y"
+       	config_node.vm.provision :unix_reboot
+    elsif !ENV['sle_reg_key'].nil?
+      	config_node.vm.provision :shell, :inline => "echo 'Registering server to SCC'; SUSEConnect --de-register; SUSEConnect --cleanup; SUSEConnect -r #{ENV['sle_reg_key']}"
+      	config_node.vm.provision :shell, :inline => "echo 'zypper -q --no-gpg-checks --gpg-auto-import-keys dup -y'; zypper -q --no-gpg-checks --gpg-auto-import-keys dup -y"
+       	config_node.vm.provision :unix_reboot
+    end
+    
+    # disable services that are defined in config.yaml
+    if !$config_yaml['disabled_services'].nil?
+        config_node.vm.provision :shell, :inline => "echo 'systemctl disable'; systemctl disable" + " " + $config_yaml['disabled_services']*" "
+      	config_node.vm.provision :shell, :inline => "echo 'systemctl stop'; systemctl stop" + " " + $config_yaml['disabled_services']*" "
+    end
+    
+    # register SES if key is provided and SES deployment is set to 'true' in config.yaml 
+    # repositories from SCC
+    if $config_yaml['deploy_ses'] and $config_yaml['use_scc_repos'] and !$config_yaml['ses_reg_key'].nil?
+       	config_node.vm.provision :shell, :inline => "echo 'register SES'; SUSEConnect -p ses/#{$config_yaml['ses_version_on_scc']}/x86_64 -r" + " " + $config_yaml['ses_reg_key']
+    elsif $config_yaml['deploy_ses'] and $config_yaml['use_scc_repos'] and !ENV['ses_reg_key'].nil?
+       	config_node.vm.provision :shell, :inline => "echo 'register SES'; SUSEConnect -p ses/#{$config_yaml['ses_version_on_scc']}/x86_64 -r" + " " + ENV['ses_reg_key']
+    end
+    
+    # repositories from custom http repo
+    if $config_yaml['deploy_ses'] and $config_yaml['use_custom_repos']
+        if !ENV['custom_repos'].nil?
+            ENV['custom_repos'].each_line do |repo|
+                config_node.vm.provision :shell, :inline => "echo 'repositories from custom http repo'; zypper --gpg-auto-import-keys ar -G -f #{repo}"
+            end
+    	elsif !$config_yaml['custom_repos'].nil?
+            $config_yaml['custom_repos'].each do |repo|
+                config_node.vm.provision :shell, :inline => "echo 'repositories from custom http repo'; zypper --gpg-auto-import-keys ar -G -f #{repo}"
+    	    end
+    	end
+    end
+    
+    # install packages defined under 'role => packages' in config.yaml
+   	config_node.vm.provision :shell, :inline => "echo 'install packages'; zypper -q --no-gpg-checks --gpg-auto-import-keys in -y #{$config_yaml[node_packages]['packages'].join(" ")}"
+            
+   	# start services that are defined in config.yaml
+    if !$config_yaml['enabled_services'].nil?
+        config_node.vm.provision :shell, :inline => "echo 'start services that are defined in config.yaml'; systemctl start" + " " + $config_yaml['enabled_services']*" "
+    end
+    
+    # enable services that are defined in config.yaml
+    if !$config_yaml['enabled_services'].nil?
+        config_node.vm.provision :shell, :inline => "echo 'systemctl enable'; systemctl enable" + " " + $config_yaml['enabled_services']*" "
+    end
+
+    # configure ssh 
+    if File.exist?('/root/.ssh/storage-automation.pub')
+      config_node.vm.provision :shell, :inline => "test ! -d /root/.ssh && mkdir /root/.ssh; chmod 700 /root/.ssh"
+      config_node.vm.provision "file", source: "/root/.ssh/storage-automation.pub", destination: "/vagrant/storage-automation.pub"
+      config_node.vm.provision :shell, :inline => "cat /vagrant/storage-automation.pub >> /root/.ssh/authorized_keys"
+    end
+    config_node.vm.provision :shell, :inline => "echo 'ssh access for master'; test ! -d /root/.ssh && mkdir /root/.ssh; chmod 700 /root/.ssh; echo '#{$pub_key}' >> /root/.ssh/authorized_keys; chmod 600 /root/.ssh/authorized_keys"
+    config_node.vm.provision :shell, :inline => "echo 'ssh configuration'; echo '#{$key}' > /root/.ssh/id_rsa2; echo '#{$pub_key}' > /root/.ssh/id_rsa2.pub; chmod 600 /root/.ssh/id_rsa2; chmod 644 /root/.ssh/id_rsa2.pub"
+    config_node.vm.provision :shell, :inline => "echo 'StrictHostKeyChecking'; echo 'StrictHostKeyChecking no' > /root/.ssh/config"
+    config_node.vm.provision :shell, :inline => "echo 'IdentityFile'; echo -e 'Host *\nIdentityFile /root/.ssh/id_rsa2' >> /root/.ssh/config"
+
+    # copy cluster.yaml to /root
+    config_node.vm.provision :shell, :inline => "echo 'cluster.yaml'; cp /vagrant/#{$project_dir}/cluster.yaml /root/"
+
+    # append bashrc file to nodes ~/.bashrc
+    config_node.vm.provision :shell, :inline => "echo '.bashrc'; cat /vagrant/#{$project_dir}/bashrc >> /root/.bashrc; cat /vagrant/#{$project_dir}/bashrc >> /home/vagrant/.bashrc"
+    
+    # clients.conf
+    if !$config_yaml['clients'].nil?
+        config_node.vm.provision "file", source: $project_dir + '/clients.conf', destination: "/tmp/clients.conf"
+    end
+
+    # add /vagrant to fstab
+    config_node.vm.provision :shell, :inline => "echo 'fstab'; echo \"$(mount | awk '/vagrant/{print $1, $3, $5}') defaults 0 0\" >> /etc/fstab"
+
+    # configure salt with master.conf and minions.conf
+    # master.conf - worker_threads
+    # minions.conf - master hostname
+    if role_cmds == 'master_cmds'
+        config_node.vm.provision :shell, :inline => "echo 'master.conf'; cp /vagrant/#{$project_dir}/master.conf /etc/salt/master.d/master.conf" 
+        config_node.vm.provision :shell, :inline => "echo 'minions.conf'; cp /vagrant/#{$project_dir}/minions.conf /etc/salt/minion.d/minions.conf" 
+    elsif role_cmds == 'minions_cmds'
+        config_node.vm.provision :shell, :inline => "echo 'minions.conf'; cp /vagrant/#{$project_dir}/minions.conf /etc/salt/minion.d/minions.conf" 
+    end
+
+    # run master_cmds or minions_cmds defined in config.yaml
+    if ($config_yaml['deploy_ses'] and $config_yaml['use_scc_repos']) or ($config_yaml['deploy_ses'] and $config_yaml['use_custom_repos'])
+        if !$config_yaml[role_cmds].nil?
+            ($config_yaml[role_cmds]).each do |cmds|
+                # we are calling unix_reboot if 'reboot' is used in custom command
+                if cmds == "reboot"
+                    config_node.vm.provision :shell, :inline => "echo 'config.yaml requested reboot'"
+                    config_node.vm.provision :unix_reboot
+                end
+
+                # Run custom commands except of 'reboot',
+                # this is handled by unix_reboot
+                if cmds != 'reboot'
+                    config_node.vm.provision :shell, :inline => "echo '#{cmds}'; #{cmds}"
+                end
+            end
+        end 
+    end
+    
+    # updates local /etc/hosts file
+    # plugin will remove the entries after hosts are shutted down or destroyed
+    config_node.hostsupdater.aliases = [host_fqdn, host_alias]
+end
+
+################################################
+### Runs bash scripts defined in config.yaml ###
+################################################
+
+def bash_scripts(config, node_role)
+    
+    if node_role =~ /master/
+        run_on = "#{$config_yaml['master']['hostname']}"
+    elsif node_role =~ /osd_node/
+    	run_on = "#{$config_yaml['osd_node']['hostname']}" + rand(1..$config_yaml['osd_node']['number']).to_s
+    elsif node_role =~ /monitor/
+    	run_on = "#{$config_yaml['monitor']['hostname']}" + rand(1..$config_yaml['monitor']['number']).to_s
+    elsif node_role =~ /clients/
+    	if !$config_yaml['clients'].nil?
+            config.vm.provision "file", source: $project_dir + "/clients.conf", destination: "/tmp/clients.conf"
+            $config_yaml['clients'].each do |run_on|
+                if !$config_yaml[node_role + "_sh"].nil?
+                    config.vm.define run_on do |sh_list|
+                        $config_yaml[node_role + "_sh"].each do |bash_script|
+                            sh_list.vm.provision "shell", inline: "echo 'WWWWW #{bash_script} WWWWW'; /bin/sh /vagrant/scripts/#{bash_script}"
+                        end
+                    end
+                end
+            end
+    	end
+    end
+    
+    if !$config_yaml[node_role + "_sh"].nil? and node_role != /clients/
+        config.vm.define run_on do |sh_list|
+            $config_yaml[node_role + "_sh"].each do |bash_script|
+                sh_list.vm.provision "shell", inline: "echo 'WWWWW #{bash_script} WWWWW'; /bin/sh /vagrant/scripts/#{bash_script}"
+            end
+        end
+    end
+end
+
+################################
+### master.conf minions.conf ###
+################################
+File.open($project_dir + "/minions.conf", "w") do |m|
+     m.write("master: #{$config_yaml['master']['hostname']}")
+end
+File.open($project_dir + "/master.conf", "w") do |m|
+    m.write("worker_threads: #{$config_yaml['worker_threads']}")
+end
+
+##################
+### hosts file ###
+##################
+
+def hosts_file(ip_address, host_fqdn, host_alias, config_node)
+    File.open($project_dir + "/hosts", "a") do |h| 
+        h.write(" 
+#{ip_address} #{host_fqdn} #{host_alias} 
+        ")
+    end
+    config_node.vm.provision :shell, :inline => "echo 'hosts file'; cat /vagrant/#{$project_dir}/hosts >> /etc/hosts" 
+end
+
+###########################
+### Creates bashrc file ###
+###########################
+
+def bashrc_file(bashrc_master,bashrc_monitors,bashrc_osd_nodes)
+    File.open($project_dir + "/bashrc", "a") do |b|
+        b.write("
+export master=\"#{$bashrc_master.join(' ')}\"
+export monitors=\"#{$bashrc_monitors.join(' ')}\"
+export osd_nodes=\"#{$bashrc_osd_nodes.join(' ')}\"
+")
+   
+    end
+end
+
+####################
+### cluster.yaml ###
+####################
+
+if $config_yaml['custom_cluster']
+    File.open($project_dir + "/cluster.yaml", "w") do |d|
+        d.write("
+service_type: mon
+placement:
+  host_pattern: '*#{$config_yaml['monitor']['hostname']}*'
+---
+service_type: mgr
+placement:
+  host_pattern: '*#{$config_yaml['monitor']['hostname']}*'
+---
+service_type: osd
+placement:
+  host_pattern: '*#{$config_yaml['osd_node']['hostname']}*'
+data_devices:
+  all: true
+encrypted: #{$config_yaml['encryption']}
+objectstore: '#{$config_yaml['osd_format']}'
+")
+    end
+end
+
+if $config_yaml['custom_cluster'] and $config_yaml['osd_node']['db_device']
+data_devices = File.read($project_dir + "/cluster.yaml")
+new_data_devices = data_devices.gsub(/all: true/, "size: ':#{$config_yaml['osd_node']['osd_size'] + 1}G'")
+File.open($project_dir + "/cluster.yaml", "w") do |file|
+    file.write(new_data_devices)
+end
+open($project_dir + "/cluster.yaml", "a") {|db|
+db << "db_devices:\n"
+db << "  size: '#{$config_yaml['osd_node']['osd_size'] * 2}G:'\n"
+}
+end
+
+####################
+### clients.conf ###
+####################
+
+if !$config_yaml['clients'].nil?
+    File.open($project_dir + "/clients.conf", "w") do |clients_conf|
+        $config_yaml['clients'].each { |every_client| clients_conf.puts(every_client) }
+    end
+end
+
+#############################
+### Vagrant configuration ###
+#############################
+
+triggers_done = nil
+
+Vagrant.configure("2") do |config|
+    config.vm.provider :libvirt do |libvirt|
+        if !ENV['ses_cl_box'].nil?
+            config.vm.box = ENV['ses_cl_box']
+        else
+            config.vm.box = $config_yaml['ses_cl_box']
+        end
+        libvirt.driver = 'kvm'
+        libvirt.host = 'localhost'
+        libvirt.uri = 'qemu:///system'
+        libvirt.memory = '2048'
+        libvirt.cpus = '1'
+        libvirt.storage_pool_name = 'default'
+        if triggers_done.nil?
+            config.trigger.after :destroy do |trigger|
+              trigger.run = {inline: "find #{$project_dir} -type f -exec truncate -s 0 {} \;" }
+            end
+            triggers_done = 1 
+        end
+    end
+
+    # MASTER
+    $bashrc_master = []
+    (1..$config_yaml['master']['number']).each do |i|
+        host_alias = $config_yaml['master']['hostname']
+        host_fqdn = $config_yaml['master']['hostname'] +"."+ $config_yaml['master']['domain']
+        ip_address = $config_yaml['master']['ip']
+        node_packages = "master"
+        role_cmds = "master_cmds" 
+        $bashrc_master.push(host_fqdn)
+        config.vm.define host_alias do |config_node|
+            hosts_file(ip_address, host_fqdn, host_alias, config_node)
+            custom_cmds(config_node, ip_address, host_fqdn, host_alias, node_packages, role_cmds)
+            config_node.vm.provider :libvirt do |libvirt_master|
+                libvirt_master.memory = $config_yaml['master']['memory']
+                libvirt_master.cpus = $config_yaml['master']['cpus']
+            end
+        end
+    end
+
+    # OSD NODES
+    $bashrc_osd_nodes = []
+    (1..$config_yaml['osd_node']['number']).each do |i|
+        host_alias = $config_yaml['osd_node']['hostname'] + "#{i}"
+        host_fqdn = $config_yaml['osd_node']['hostname'] +"#{i}."+ $config_yaml['osd_node']['domain']
+        ip_address = "#{$config_yaml['osd_node']['ip'].rpartition(".")[0]}.#{$config_yaml['osd_node']['ip'].rpartition(".")[-1].to_i + (i - 1)}"
+        node_packages = "osd_node"
+        role_cmds = "minions_cmds"
+        $bashrc_osd_nodes.push(host_fqdn)
+   	config.vm.define host_alias do |config_node|
+	    hosts_file(ip_address, host_fqdn, host_alias, config_node)
+       	    custom_cmds(config_node, ip_address, host_fqdn, host_alias, node_packages, role_cmds)
+       	    config_node.vm.provider :libvirt do |libvirt_disk|
+                (1..$config_yaml['osd_node']['osds_number']).each do |osd_disk|
+                    libvirt_disk.storage :file,
+                    :type => 'qcow2',
+                    :size => "#{$config_yaml['osd_node']['osd_size']}G"
+                end
+                if $config_yaml['osd_node']['db_device']
+                    libvirt_disk.storage :file,
+                    :type => 'qcow2',
+                    :size => "#{$config_yaml['osd_node']['osd_size'] * 2 + 5}G"
+                end
+                libvirt_disk.memory = $config_yaml['osd_node']['memory']
+                libvirt_disk.cpus = $config_yaml['osd_node']['cpus']
+            end
+   	end
+    end
+
+    # MONITORS
+    $bashrc_monitors = []
+    (1..$config_yaml['monitor']['number']).each do |i|
+        host_alias = $config_yaml['monitor']['hostname'] + "#{i}"
+        host_fqdn = $config_yaml['monitor']['hostname'] +"#{i}."+ $config_yaml['monitor']['domain']
+        ip_address = "#{$config_yaml['monitor']['ip'].rpartition(".")[0]}.#{$config_yaml['monitor']['ip'].rpartition(".")[-1].to_i + (i - 1)}"
+        node_packages = "monitor"
+        role_cmds = "minions_cmds"
+        $bashrc_monitors.push(host_fqdn)
+        config.vm.define host_alias do |config_node|
+            hosts_file(ip_address, host_fqdn, host_alias, config_node)
+            custom_cmds(config_node, ip_address, host_fqdn, host_alias, node_packages, role_cmds)
+                config_node.vm.provider :libvirt do |libvirt_monitor|
+                    libvirt_monitor.memory = $config_yaml['monitor']['memory']
+                    libvirt_monitor.cpus = $config_yaml['monitor']['cpus']
+                end
+            end
+        end
+	bash_scripts(config, 'master')
+	bash_scripts(config, 'monitor')
+	bash_scripts(config, 'osd_node')
+	bash_scripts(config, 'clients')
+    bashrc_file($bashrc_master,$bashrc_osd_nodes,$bashrc_monitors)
+
+    # CLIENTS
+    if !$config_yaml['clients'].nil?
+        r = 0
+        $config_yaml['clients'].each do |client_box|
+            config.vm.define client_box do |config_node|
+                config_node.vm.provider :libvirt do |libvirt|
+                    libvirt.driver = 'kvm'
+                    libvirt.host = 'localhost'
+                    libvirt.uri = 'qemu:///system'
+                    libvirt.storage_pool_name = 'default'
+                    if client_box == 'sles11sp4'
+                        libvirt.disk_bus = 'scsi'
+                        libvirt.nic_model_type = 'e1000'
+                    end
+                end
+                r += 1
+                last_octet = $config_yaml['clients_last_octet'] + r
+                ip_address = "#{$config_yaml['monitor']['ip'].rpartition(".")[0]}.#{last_octet}" 
+                config_node.vm.box = client_box
+                host_alias = client_box
+                host_fqdn = client_box + ".#{$config_yaml['osd_node']['domain']}"
+                config_node.vm.hostname = host_fqdn
+                config_node.vm.network :private_network, :ip => ip_address
+                hosts_file(ip_address, host_fqdn, host_alias, config_node)
+                config_node.hostsupdater.aliases = [host_fqdn, host_alias]
+                config_node.vm.provision :shell, :inline => "echo 'ssh access for master'; test ! -d /root/.ssh && mkdir /root/.ssh; chmod 700 /root/.ssh; echo '#{$pub_key}' >> /root/.ssh/authorized_keys; chmod 600 /root/.ssh/authorized_keys"
+                config_node.vm.provision :shell, :inline => "echo 'ssh configuration'; echo '#{$key}' > /root/.ssh/id_rsa2; echo '#{$pub_key}' > /root/.ssh/id_rsa2.pub; chmod 600 /root/.ssh/id_rsa2; chmod 644 /root/.ssh/id_rsa2.pub"
+                config_node.vm.provision :shell, :inline => "echo 'StrictHostKeyChecking'; echo 'StrictHostKeyChecking no' > /root/.ssh/config"
+                config_node.vm.provision :shell, :inline => "echo 'IdentityFile'; echo -e 'Host *\nIdentityFile /root/.ssh/id_rsa2' >> /root/.ssh/config"
+                if File.exist?('/root/.ssh/storage-automation.pub')
+                  config_node.vm.provision "file", source: "/root/.ssh/storage-automation.pub", destination: "/vagrant/storage-automation.pub"
+                  config_node.vm.provision :shell, :inline => "cat /vagrant/storage-automation.pub >> /root/.ssh/authorized_keys"
+                end
+            end
+        end
+    end
+end

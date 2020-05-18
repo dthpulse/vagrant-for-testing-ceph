@@ -1,0 +1,420 @@
+#!/usr/bin/env ruby
+
+require './vagrant-provision-reboot-plugin'
+require 'yaml'
+require 'net/ssh'
+require 'fileutils'
+
+$project_name = 'SES6_Build_validation_OpenStack'
+$project_dir = "#{$project_name}" + '-files'
+FileUtils.mkdir_p $project_name + '-files'
+
+#$stdout.reopen("vagrant.log", "a")
+
+# Export project directory to the world will prevent us from some Vagrant errors
+system("test \"`grep \"$(pwd) \\*\" /etc/exports`\" || echo \"$(pwd) \*(rw,sync,wdelay,hide,no_subtree_check,anonuid=0,anongid=0,sec=sys,secure,root_squash,all_squash)\" >> /etc/exports")
+system("exportfs -a > /dev/null 2>&1")
+
+# generate ssh keys for master
+key = OpenSSL::PKey::RSA.new 2048
+type = key.ssh_type
+data = [ key.to_blob ].pack('m0')
+pub_key = "#{type} #{data}"
+
+if !ENV['config_yaml'].nil?
+  $config_yaml = YAML::load_file(ENV['config_yaml'])
+else
+  $config_yaml = YAML::load_file($project_name + '.yaml')
+end
+
+#### Module definition for custom commands
+def custom_cmds(config_node, host_fqdn, host_alias, node_packages, role_cmds)
+
+	config_node.vm.hostname = host_fqdn
+
+	# reboot wicked to keep hostname
+	config_node.vm.provision :shell, :inline => "echo 'rebooting wicked'; test -f /usr/lib/systemd/system/wicked.service && systemctl restart wicked"
+
+	# allow vendor change
+	if $config_yaml['allow_vendor_change']
+		config_node.vm.provision :shell, :inline => "echo 'allowing vendor change'; echo \"solver.allowVendorChange = true\" >> /etc/zypp/zypp.conf"
+	end
+
+	# upgrade and reboot host
+	if !$config_yaml['sle_reg_key'].nil?
+	      	config_node.vm.provision :shell, :inline => "echo 'Registering server to SCC'; SUSEConnect --de-register; SUSEConnect --cleanup; SUSEConnect -r #{$config_yaml['sle_reg_key']}"
+	      	config_node.vm.provision :shell, :inline => "echo 'zypper -q --no-gpg-checks --gpg-auto-import-keys dup -y'; zypper -q --no-gpg-checks --gpg-auto-import-keys dup -y"
+	       	config_node.vm.provision :unix_reboot
+	elsif !ENV['sle_reg_key'].nil?
+	      	config_node.vm.provision :shell, :inline => "echo 'Registering server to SCC'; SUSEConnect --de-register; SUSEConnect --cleanup; SUSEConnect -r #{ENV['sle_reg_key']}"
+	      	config_node.vm.provision :shell, :inline => "echo 'zypper -q --no-gpg-checks --gpg-auto-import-keys dup -y'; zypper -q --no-gpg-checks --gpg-auto-import-keys dup -y"
+	       	config_node.vm.provision :unix_reboot
+	end
+        
+	# disable services that are defined in config.yaml
+	if !$config_yaml['disabled_services'].nil?
+	      	config_node.vm.provision :shell, :inline => "echo 'systemctl disable'; systemctl disable" + " " + $config_yaml['disabled_services']*" "
+	      	config_node.vm.provision :shell, :inline => "echo 'systemctl stop'; systemctl stop" + " " + $config_yaml['disabled_services']*" "
+       	end
+
+
+	# configure NTP server
+	if $config_yaml['enabled_services'] =~ /ntp/ and $config_yaml['ntp_server'].nil?
+		config_node.vm.provision :shell, :inline => "echo 'ntp'; echo 'server ntp.suse.cz' >> /etc/ntp.conf"
+	else
+		config_node.vm.provision :shell, :inline => "echo 'ntp'; echo 'server #{$config_yaml['ntp_server']}' >> /etc/ntp.conf"
+	end
+
+
+
+	# register SES if key is provided and SES deployment is set to 'true' in config.yaml 
+	# repositories from SCC
+	if $config_yaml['deploy_ses'] and $config_yaml['use_scc_repos'] and !$config_yaml['ses_reg_key'].nil?
+	       	config_node.vm.provision :shell, :inline => "echo 'register SES'; SUSEConnect -p ses/#{$config_yaml['ses_version_on_scc']}/x86_64 -r" + " " + $config_yaml['ses_reg_key']
+	       	# install packages defined under 'role => packages' in config.yaml
+		config_node.vm.provision :shell, :inline => "echo 'install packages'; zypper -q --no-gpg-checks --gpg-auto-import-keys in -y #{$config_yaml[node_packages]['packages'].join(" ")}"
+
+		num_of_repos = 0
+	
+	elsif $config_yaml['deploy_ses'] and $config_yaml['use_scc_repos'] and !ENV['ses_reg_key'].nil?
+	       	config_node.vm.provision :shell, :inline => "echo 'register SES'; SUSEConnect -p ses/#{$config_yaml['ses_version_on_scc']}/x86_64 -r" + " " + ENV['ses_reg_key']
+	       	# install packages defined under 'role => packages' in config.yaml
+		config_node.vm.provision :shell, :inline => "echo 'install packages'; zypper -q --no-gpg-checks --gpg-auto-import-keys in -y #{$config_yaml[node_packages]['packages'].join(" ")}"
+
+		num_of_repos = 0
+	
+	# repositories from custom http repo
+       	elsif $config_yaml['deploy_ses'] and $config_yaml['use_custom_repos']
+	       	i = 0
+		if !ENV['custom_repos'].nil?
+			ENV['custom_repos'].each_line do |repo|
+			       	i += 1
+				config_node.vm.provision :shell, :inline => "echo 'repositories from custom http repo'; zypper ar -t yast -f -c #{repo.strip} vgr_ses_repo#{i}"
+		       	end
+		elsif !$config_yaml['custom_repos'].nil?
+			$config_yaml['custom_repos'].each do |repo|
+			       	i += 1
+			       	config_node.vm.provision :shell, :inline => "echo 'repositories from custom http repo'; zypper ar -t yast -f -c #{repo} vgr_ses_repo#{i}"
+		       	end
+		end
+
+	       	# install packages defined under 'role => packages' in config.yaml
+		config_node.vm.provision :shell, :inline => "echo 'install packages'; zypper -q --no-gpg-checks --gpg-auto-import-keys in -y #{$config_yaml[node_packages]['packages'].join(" ")}"
+		num_of_repos = i
+	       	i = nil
+                
+        	# start services that are defined in config.yaml
+               	if !$config_yaml['enabled_services'].nil?
+        	      	config_node.vm.provision :shell, :inline => "echo 'start services that are defined in config.yaml'; systemctl start" + " " + $config_yaml['enabled_services']*" "
+               	end
+
+       	end
+
+	# enable services that are defined in config.yaml
+       	if !$config_yaml['enabled_services'].nil?
+	      	config_node.vm.provision :shell, :inline => "echo 'systemctl enable'; systemctl enable" + " " + $config_yaml['enabled_services']*" "
+       	end
+
+	# run master_cmds or minions_cmds defined in config.yaml
+       	if ($config_yaml['deploy_ses'] and $config_yaml['use_scc_repos']) or ($config_yaml['deploy_ses'] and $config_yaml['use_custom_repos'])
+	       	if !$config_yaml[role_cmds].nil?
+		      	($config_yaml[role_cmds]).each do |cmds|
+			       	# creates master.conf which defined master for salt minions
+				# copy it to node
+				# move it to salt configuration directory
+				if cmds =~ /systemctl enable salt-master salt-minion/ or cmds == 'systemctl enable salt-minion'
+					File.open($project_dir + "/master.conf", "w") do |m|
+					       	m.write("master: #{$config_yaml['master']['hostname']}")
+				       	end
+				       	config_node.vm.provision "file", source: $project_dir + '/master.conf', destination: "~/master.conf"
+				       	config_node.vm.provision :shell, :inline => "echo 'master.conf'; cp /root/master.conf /etc/salt/minion.d/master.conf" 
+				end
+
+				# we are calling unix_reboot if 'reboot' is used in custom command
+	                        if cmds == "reboot"
+					config_node.vm.provision :shell, :inline => "echo 'config.yaml requested reboot'"
+				       	config_node.vm.provision :unix_reboot
+			       	end
+
+				# modify deepsea_minions.sls
+				if cmds =~ /ceph.stage.0/
+					config_node.vm.provision :shell, :inline => "echo 'deepsea_minions.sls'; cp /root/deepsea_minions.sls /srv/pillar/ceph/deepsea_minions.sls"
+				# creates policy.cfg
+				elsif (cmds =~ /ceph.stage.2/) and (!$config_yaml['encryption'])
+					config_node.vm.provision :shell, :inline => "echo 'policy.cfg'; cp /root/policy.cfg /srv/pillar/ceph/proposals/policy.cfg"
+					config_node.vm.provision :shell, :inline => "echo 'permissions for policy.cfg'; chown salt:salt /srv/pillar/ceph/proposals/policy.cfg"
+					config_node.vm.provision :shell, :inline => "echo 'mon_allow_pool_delete'; if [ -d /srv/salt/ceph/configuration/files/ceph.conf.d ];then echo \"mon_allow_pool_delete = true \" > /srv/salt/ceph/configuration/files/ceph.conf.d/mon.conf; fi"
+                                        if (File.exist?($project_dir + "/drive_groups.yml"))
+                                        config_node.vm.provision :shell, :inline => "echo 'drive_groups.yml'; if [ -d /srv/salt/ceph/configuration/files ];then cp /root/drive_groups.yml /srv/salt/ceph/configuration/files/; fi"
+                                        end
+				elsif (cmds =~ /ceph.stage.2/) and ($config_yaml['encryption'])
+					config_node.vm.provision :shell, :inline => "echo 'creating profile for encrypted OSDs'; salt-run proposal.populate encryption=dmcrypt name=encrypted"
+					config_node.vm.provision :shell, :inline => "echo 'policy.cfg'; cp /root/policy.cfg /srv/pillar/ceph/proposals/policy.cfg"
+					config_node.vm.provision :shell, :inline => "echo 'permissions for policy.cfg'; chown salt:salt /srv/pillar/ceph/proposals/policy.cfg"
+					config_node.vm.provision :shell, :inline => "echo 'mon_allow_pool_delete'; if [ -d /srv/salt/ceph/configuration/files/ceph.conf.d ];then echo \"mon_allow_pool_delete = true \" > /srv/salt/ceph/configuration/files/ceph.conf.d/mon.conf; fi"
+                                        if (File.exist?($project_dir + "/drive_groups.yml"))
+                                        config_node.vm.provision :shell, :inline => "echo 'drive_groups.yml'; if [ -d /srv/salt/ceph/configuration/files ];then cp /root/drive_groups.yml /srv/salt/ceph/configuration/files/; fi"
+                                        end
+				# in case that lower package version from custom repos should be used, we need to downgrade it 
+				# to bypass prompt. 
+				# 'allow_vendor_change' allows us to bypass prompt only in case of higher version
+				elsif (cmds =~ /ceph.stage.3/) and ($config_yaml['use_custom_repos'])
+					(1..num_of_repos).each do |repo_num|
+					       	config_node.vm.provision :shell, :inline => "echo 'zypper dup'; salt '*' cmd.run \"zypper -q --no-gpg-checks --gpg-auto-import-keys dup -y --from vgr_ses_repo#{repo_num}\""
+					end
+				end
+
+				# Run custom commands except of 'reboot',
+				# this is handled by unix_reboot
+				if cmds != 'reboot'
+				       	config_node.vm.provision :shell, :inline => "echo '#{cmds}'; #{cmds}"
+				end
+
+		       	end
+	       	end 
+	end
+
+
+	# updates local /etc/hosts file
+	# plugin will remove the entries after hosts are shutted down or destroyed
+	config_node.hostsupdater.aliases = [host_fqdn, host_alias]
+
+end
+
+#### Runs bash scripts defined in config.yaml
+def bash_scripts(config, node_role)
+
+	config.vm.provision "file", source: "./scripts/config.conf", destination: "/tmp/config.conf"
+
+	if node_role =~ /master/
+		run_on = "#{$config_yaml['master']['hostname']}"
+	elsif node_role =~ /osd_node/
+		run_on = "#{$config_yaml['osd_node']['hostname']}" + rand(1..$config_yaml['osd_node']['number']).to_s
+	elsif node_role =~ /monitor/
+		run_on = "#{$config_yaml['monitor']['hostname']}" + rand(1..$config_yaml['monitor']['number']).to_s
+	elsif node_role =~ /clients/
+		if !$config_yaml['clients'].nil?
+		      	config.vm.provision "file", source: $project_dir + "/clients.conf", destination: "/tmp/clients.conf"
+		      	$config_yaml['clients'].each do |run_on|
+			       	if !$config_yaml[node_role + "_sh"].nil?
+				      	config.vm.define run_on do |sh_list|
+					       	$config_yaml[node_role + "_sh"].each do |bash_script|
+						       	sh_list.vm.provision "shell", path: bash_script
+					       	end
+				       	end
+				end
+		       	end
+		end
+	end
+
+	if !$config_yaml[node_role + "_sh"].nil? and node_role != /clients/
+	      	config.vm.define run_on do |sh_list|
+		       	$config_yaml[node_role + "_sh"].each do |bash_script|
+				sh_list.vm.provision "shell", path: bash_script
+		       	end
+	       	end
+	end
+
+end
+
+triggers_done = nil
+# Vagrant configuration
+Vagrant.configure('2') do |config|
+
+  config.ssh.username = 'root'
+  config.ssh.private_key_path = '/root/.ssh/storage-automation'
+
+  config.vm.provider :openstack do |os|
+            os.identity_api_version             = '3'
+            os.openstack_auth_url               = ENV['OS_AUTH_URL']
+            os.project_name                     = ENV['OS_PROJECT_NAME']
+            os.user_domain_name                 = ENV['OS_USER_DOMAIN_NAME']
+            os.project_domain_name              = ENV['OS_PROJECT_DOMAIN_ID']
+            os.username                         = ENV['OS_USERNAME']
+            os.password                         = ENV['OS_PASSWORD']
+            os.region                           = ENV['OS_REGION_NAME']
+            os.floating_ip_pool                 = 'floating'
+            os.floating_ip_pool_always_allocate = (ENV['OS_FLOATING_IP_ALWAYS_ALLOCATE'] == 'true')
+            os.flavor                           = "#{$config_yaml['os_flavor']}"
+            if !ENV['ses_cl_box'].nil?
+              os.image = ENV['ses_cl_box']
+            else
+              os.image = $config_yaml['ses_cl_box']
+            end
+            os.networks                        << 'sesci'
+            os.keypair_name = 'storage-automation'
+	    if triggers_done.nil?
+	        config.trigger.after :destroy do |trigger|
+                trigger.run = {inline: "truncate -s 0 #{$project_dir}/hosts #{$project_dir}/master.conf #{$project_dir}/policy.cfg #{$project_dir}/deepsea_minions.sls #{$project_dir}/clients.conf #{$project_dir}/drive_groups.yml"}
+		end
+	       	triggers_done = 1 
+           end
+  end
+
+
+	# MASTER
+	(1..$config_yaml['master']['number']).each do |i|
+	       	host_alias = $config_yaml['master']['hostname']
+	       	host_fqdn = $config_yaml['master']['hostname'] +"."+ $config_yaml['master']['domain']
+	       	node_packages = "master"
+	       	role_cmds = "master_cmds" 
+
+
+                # drive_groups.yaml
+                if $config_yaml['custom_drive_groups']
+                  File.open($project_dir + "/drive_groups.yml", "w") do |d|
+                    d.write("
+default:
+  target: '*'
+  data_devices:
+    all: true
+  encrypted: #{$config_yaml['encryption']}
+  format: #{$config_yaml['osd_format']}
+")
+                  end
+                end
+                if $config_yaml['custom_drive_groups'] and $config_yaml['osd_node']['db_device']
+
+                  data_devices = File.read($project_dir + "/drive_groups.yml")
+                  new_data_devices = data_devices.gsub(/all: true/, "size: ':#{$config_yaml['osd_node']['osd_size'] + 1}G'")
+                  File.open($project_dir + "/drive_groups.yml", "w") do |file|
+                    file.write(new_data_devices)
+                  end
+
+                  open($project_dir + "/drive_groups.yml", "a") {|db| 
+db << "  db_devices:\n"
+db << "    size: '#{$config_yaml['osd_node']['osd_size'] * 2}G:'\n"
+}
+                end
+
+		File.open($project_dir + "/policy.cfg", "w") do |f|
+ f.write("
+cluster-ceph/cluster/*.sls
+role-master/cluster/#{$config_yaml['master']['hostname']}*.sls
+role-admin/cluster/#{$config_yaml['master']['hostname']}*.sls
+role-mon/cluster/#{$config_yaml['monitor']['hostname']}*.sls
+role-mgr/cluster/#{$config_yaml['monitor']['hostname']}*.sls
+config/stack/default/global.yml
+config/stack/default/ceph/cluster.yml
+role-prometheus/cluster/#{$config_yaml['master']['hostname']}*.sls
+role-grafana/cluster/#{$config_yaml['master']['hostname']}*.sls
+role-storage/cluster/#{$config_yaml['osd_node']['hostname']}*.sls
+")
+       	        end
+		
+	        # Some syntax changes to profile.cfg needed for SES4
+	        if $config_yaml['ses_version_on_scc'] == "4"
+		       	File.open($project_dir + "/policy.cfg", "a") do |f|
+			       	f.puts("role-mon/stack/default/ceph/minions/#{$config_yaml['monitor']['hostname']}*.yml")
+		       	end
+		       	policy_file=File.read($project_dir + "/policy.cfg")
+		       	replace=policy_file.gsub(/profile-#{profile_name}/, "profile-*")
+		       	File.open($project_dir + "/policy.cfg", "w") do |f|
+			       	f.write(replace)
+		       	end
+	       	end
+
+	        # creates gobal deepsea minions definition file for deepsea
+	        File.open($project_dir + "/deepsea_minions.sls", "w") do |g|
+		       	g.write("deepsea_minions: '*'")
+	       	end
+
+	        # update config.conf file with master hostname
+                updated_hostname=File.read("scripts/config.conf").sub(/master=(.*)/, "master=#{host_alias}")
+	       	File.open("scripts/config.conf", "w") { |file| file.puts updated_hostname }
+
+	        # creates clients.conf file
+         	if !$config_yaml['clients'].nil?
+         	      	File.open($project_dir + "/clients.conf", "w") do |clients_conf|
+         		       	$config_yaml['clients'].each { |every_client| clients_conf.puts(every_client) }
+         	       	end
+         		config.vm.provision "file", source: $project_dir + '/clients.conf', destination: "/tmp/clients.conf"
+         	end
+         	       
+                	config.vm.define host_alias do |config_node|
+				config_node.nfs.functional = false
+                                config_node.vm.provider :openstack do |os|
+					os.server_name = host_alias
+                                        os.floating_ip_pool = ['floating']
+				end
+			       	config_node.vm.provision "file", source: $project_dir + "/policy.cfg", destination: "~/policy.cfg"
+         	                config_node.vm.provision "file", source: $project_dir + "/deepsea_minions.sls", destination: "~/deepsea_minions.sls"
+                                if (File.exist?($project_dir + "/drive_groups.yml"))
+                                config_node.vm.provision "file", source: $project_dir + "/drive_groups.yml", destination: "~/drive_groups.yml"
+                                end
+                       	       	config_node.vm.provision :shell, :inline => "echo 'StrictHostKeyChecking no';echo \"StrictHostKeyChecking no\" >> /etc/ssh/ssh_config"
+                       	 	config_node.vm.provision :shell, :inline => "echo 'ssh configuration'; test ! -d /root/.ssh && mkdir /root/.ssh; chmod 700 /root/.ssh; echo '#{key}' > /root/.ssh/id_rsa; echo '#{pub_key}' > /root/.ssh/id_rsa.pub; chmod 600 /root/.ssh/id_rsa; chmod 644 /root/.ssh/id_rsa.pub"
+		       	        custom_cmds(config_node, host_fqdn, host_alias, node_packages, role_cmds)
+		       	end
+         	end
+
+	# OSD NODES
+	vgr_volume_num = 0
+        vgr_db_volume_num = 0
+	(1..$config_yaml['osd_node']['number']).each do |i|
+		host_alias = $config_yaml['osd_node']['hostname'] + "#{i}"
+	       	host_fqdn = $config_yaml['osd_node']['hostname'] +"#{i}."+ $config_yaml['osd_node']['domain']
+		node_packages = "osd_node"
+		role_cmds = "minions_cmds"
+
+	       	config.vm.define host_alias do |config_node|
+			config_node.nfs.functional = false
+		       	config_node.vm.provider :openstack do |os|
+			       	os.server_name = host_alias
+                                os.floating_ip_pool = ['floating']
+				os.volumes = [
+					"vgr_volume#{vgr_volume_num += 1}",
+					"vgr_volume#{vgr_volume_num += 1}",
+                                        "vgr_db_volume#{vgr_db_volume_num += 1}"
+				]
+		       	end
+		       	custom_cmds(config_node, host_fqdn, host_alias, node_packages, role_cmds)
+		       	config_node.vm.provision :shell, :inline => "echo 'ssh access for master'; test ! -d /root/.ssh && mkdir /root/.ssh; chmod 700 /root/.ssh; echo '#{pub_key}' > /root/.ssh/authorized_keys; chmod 600 /root/.ssh/authorized_keys"
+	       	end
+       	end
+
+	# MONITORS
+	(1..$config_yaml['monitor']['number']).each do |i|
+		host_alias = $config_yaml['monitor']['hostname'] + "#{i}"
+	       	host_fqdn = $config_yaml['monitor']['hostname'] +"#{i}."+ $config_yaml['monitor']['domain']
+		node_packages = "monitor"
+		role_cmds = "minions_cmds"
+
+	       	config.vm.define host_alias do |config_node|
+			config_node.nfs.functional = false
+		       	config_node.vm.provider :openstack do |os|
+			       	os.server_name = host_alias
+                                os.floating_ip_pool = ['floating']
+		       	end
+		       	custom_cmds(config_node, host_fqdn, host_alias, node_packages, role_cmds)
+		       	config_node.vm.provision :shell, :inline => "echo 'ssh access for master'; test ! -d /root/.ssh && mkdir /root/.ssh; chmod 700 /root/.ssh; echo '#{pub_key}' > /root/.ssh/authorized_keys; chmod 600 /root/.ssh/authorized_keys"
+		end
+	end
+
+	bash_scripts(config, 'master')
+	bash_scripts(config, 'monitor')
+	bash_scripts(config, 'osd_node')
+	bash_scripts(config, 'clients')
+
+	# CLIENTS
+	if !$config_yaml['clients'].nil?
+		r = 0
+	      	$config_yaml['clients'].each do |client_box|
+		       	config.vm.define client_box do |config_node|
+			       	config_node.nfs.functional = false
+			       	config_node.vm.provider :openstack do |os|
+			       	os.server_name = client_box
+			       	end
+			       	r += 1
+			       	last_octet = $config_yaml['clients_last_octet'] + r
+			       	ip_address = "#{$config_yaml['monitor']['ip'].rpartition(".")[0]}.#{last_octet}" 
+			       	host_alias = client_box
+			       	host_fqdn = client_box + ".#{$config_yaml['osd_node']['domain']}"
+			       	config_node.vm.hostname = host_fqdn
+			       	config_node.vm.network :private_network, :ip => ip_address
+			       	config_node.hostsupdater.aliases = [host_fqdn, host_alias]
+			       	config_node.vm.provision :shell, :inline => "echo 'ssh access for master'; test ! -d /root/.ssh && mkdir /root/.ssh; chmod 700 /root/.ssh; echo '#{pub_key}' > /root/.ssh/authorized_keys; chmod 600 /root/.ssh/authorized_keys"
+		       	end
+	       	end
+	end
+end

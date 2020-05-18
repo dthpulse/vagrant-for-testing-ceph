@@ -1,0 +1,233 @@
+##################################
+### SES cluster global options ###
+##################################
+
+# Vagrant box to be used for SES cluster
+# You can set this value as system env, for example:
+# export ses_cl_box="sle15sp1"
+ses_cl_box: 'sle15sp2snap12'
+
+# OpenStack os.flavor to use
+# basically it has to be set the same as image flavor
+#os_flavor: 'm1.medsmall'
+
+# If set to 'true' Ceph will be deployed
+# If set to 'false' only servers will be deployed
+deploy_ses: true
+
+# SLE registration key
+# You can set SLE registration key from CLI as system environment variable:
+# export sle_reg_key="28738@C3P1G-EXe-eLq7-8eoqehc57v"
+# If kept empty SLE servers will not be registered and updated
+sle_reg_key:
+
+# SES registration key
+# You can set SES registration key from CLI as system environment variable:
+# export ses_reg_key="20676@C313G01-S3S-698fjh105"
+# If kept empty Ceph will not be deployed (valid for SCC repos)
+ses_reg_key:
+
+# NTP server
+# if kept empty then ntp.suse.cz is configured on the VMs
+ntp_server: ntp.suse.cz
+
+# Allow vendor change
+# In this case the package manager will not ask permission to change vendor for packages, and updating will just install whatever package has the highest version number, regardless of where it comes from.
+allow_vendor_change: true
+
+
+# SES deployment commands - will run if 'deploy_ses:true'
+# master packages must include deepsea, salt-master and salt-minion.
+# minions packages must include salt-minion
+# if you need to reboot the node on some step, just use 'reboot'. Vagrant
+# will handle it.
+master_cmds:
+        #- aa-teardown
+        - systemctl enable salt-master salt-minion
+        - systemctl start salt-master salt-minion; sleep 600
+        - salt-key -Ay
+
+minions_cmds:
+        #- aa-teardown
+        - systemctl enable salt-minion
+        - systemctl start salt-minion
+        - until nc -z master 4505; do sleep 1;done ; systemctl start salt-minion # wait for mster to be started. You have to define master hostname here.
+        - sleep 150; if [[ "`hostname`" == monitor* ]];then ssh master "while ps -ef | grep deploy_ses.sh | grep -v grep > /dev/null 2>&1;do sleep 30;done" ;fi
+
+# SCC SES repositories
+use_scc_repos: false
+
+# What version of SES to install from SCC repositories.
+# Number that is valid is shown by 'SUSEConnect --list-extensions'
+# command: ses/5/x86_64 
+# Legal values are numbers like 4, 5, 6
+ses_version_on_scc: "7"
+
+# Custom SES repositories
+# You can set SES repositories from CLI as system environment variable:
+# export custom_repos="http://192.168.122.1/ses5/m9/1
+# http://192.168.122.1/ses5/m9/2
+# http://192.168.122.1/ses5/m9/3"
+# then Vagrant will prefer them instead of those set up in yaml file.
+use_custom_repos: true
+custom_repos:
+        - http://download.opensuse.org/repositories/network:/cluster/SLE_15_SP2/network:cluster.repo
+        - http://download.opensuse.org/repositories/network:/utilities/SLE_15/network:utilities.repo
+        - http://download.suse.de/ibs/SUSE:/CA/SLE_15_SP2/SUSE:CA.repo
+        - http://ecp-registry/current_ses.repo
+        - http://ecp-registry/current_os.repo
+
+# System services we want to be enables / disabled on fresh deployed nodes
+enabled_services:
+        #- ntpd 
+
+disabled_services: 
+         #- apparmor
+         #- SuSEfirewall2
+
+#############################
+### master worker threads ###
+#############################
+worker_threads: '20'
+         
+############################
+### cluster.yaml options ###
+############################
+
+custom_cluster: true
+
+# whether to use OSD encryption or not
+encryption: false
+
+# filestore / bluestore for OSD
+# if using filestore increase OSDs size to 20G
+osd_format: 'bluestore'
+
+##########################
+### Role based options ###
+##########################
+
+# Master node
+master:
+        os_flavor: 'm2.medium'
+        hostname: master
+        domain: openstack.local
+        number: 1
+        memory: 8196 # kB
+        cpus: 2
+        packages: # To use it both SLE and SES has to be registered. Otherwise keep it empty.
+                - salt
+                - salt-master
+                - salt-minion
+                - bc
+                - vim
+                - less
+                - ceph-salt
+                - ca-certificates-suse
+                - jq
+                - supportutils
+                - supportutils-plugin-salt
+                - supportutils-plugin-ses
+                - pdsh
+                  #- strace
+
+# Minion nodes
+# OSD nodes
+osd_node: 
+        os_flavor: 'm2.medium'
+        hostname: osd-node # Global hostname. Vagrant will add number to the end.
+        domain: openstack.local
+        number: 5 # number of OSD nodes. Currently 2 OSDs per node are supported. If you need more or less edit Vagrantfile os.volumes parameter.
+        memory: 2048 # kB
+        osds_number: 2
+        osd_size: 10 # G
+        db_device: false # use separate drive for DB
+        cpus: 2
+        packages: # To use it both SLE and SES has to be registered. Otherwise keep it empty.
+                - salt-minion
+                - bc
+                - vim
+                - less
+                - ca-certificates-suse
+                - jq
+                - supportutils
+                - supportutils-plugin-salt
+                - supportutils-plugin-ses
+                - pdsh
+                  #- strace
+
+# Monitoring nodes
+monitor: 
+        os_flavor: 'm2.medium'
+        hostname: monitor # Global hostname. Vagrant will add number to the end.
+        domain: openstack.local
+        number: 3 # number of Monitor nodes
+        memory: 1024 # kB
+        cpus: 1
+        packages: # To use it both SLE and SES has to be registered. Otherwise keep it empty.
+                - salt-minion
+                - bc
+                - vim
+                - less
+                - ca-certificates-suse
+                - jq
+                - supportutils
+                - supportutils-plugin-salt
+                - supportutils-plugin-ses
+                - pdsh
+                  #- strace
+
+####################################
+### Bash scripts to run on nodes ###
+####################################
+
+# Based on roles                  
+                  
+master_sh:
+        - hosts_file_correction.sh
+        - deploy_ses.sh
+
+monitor_sh:
+          #- configure_ses.sh
+          #- stop_osds_daemon.sh
+          #- happy_path_scenario.sh
+          #- ceph_health_cmds.sh
+          #- ceph_osd_tiering.sh
+          #- disk_fault_injection.sh
+          #- erasure_code_profile.sh
+          #- monitor_failover.sh
+          #- network_failure.sh
+          #- pool_compression.sh
+          #  #- rack_dc_region_unavailability.sh
+          #- mds_basic.sh
+          #- rbd_image.sh
+          #- rgw_basic.sh
+          #- removing_OSD.sh # keep as last script in the queue
+          
+osd_node_sh:
+#        - kill_osd.sh
+
+clients_sh:
+#        - whatever.sh
+
+#################################################
+### List of clients to be deployed by Vagrant ###
+#################################################
+
+# list of clients (vagrant box name)
+# client hostname will be identical with its vagrant box name
+# For clients is reservated the ip address range >= xxx.xxx.xxx.220
+clients_last_octet: 220
+clients:
+        #- sles11sp4
+        #- sles12sp4
+        ##- sle15
+        #- sle15sp1
+        ##- sles-es74
+        ##- sles-es75
+        #- sles-es76
+        #- sles-es80
+        #- ubuntu164
+        #- ubuntu184
+        #- ubuntu204
+        ##- fedora28

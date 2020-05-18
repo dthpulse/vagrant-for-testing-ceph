@@ -1,0 +1,31 @@
+{
+    "description": "UEFI firmware for aarch64",
+    "interface-types": [
+        "uefi"
+    ],
+    "mapping": {
+        "device": "flash",
+        "executable": {
+            "filename": "/usr/share/qemu/aavmf-aarch64-code.bin",
+            "format": "raw"
+        },
+        "nvram-template": {
+            "filename": "/usr/share/qemu/aavmf-aarch64-vars.bin",
+            "format": "raw"
+        }
+    },
+    "targets": [
+        {
+            "architecture": "aarch64",
+            "machines": [
+                "virt-*"
+            ]
+        }
+    ],
+    "features": [
+        "verbose-static"
+    ],
+    "tags": [
+
+    ]
+}
