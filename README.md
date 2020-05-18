@@ -28,7 +28,7 @@
          * [QEMU VM installation for Vagrant box manually](#qemu-vm-installation-for-vagrant-box-manually)
             * [x86_64](#x86_64-1)
             * [AARCH64 and Mixed](#aarch64-and-mixed-1)
-         * [QEMU VM installation for Vagrant box - Clients](#qemu-vm-installation-for-vagrant-box---clients)
+         * [QEMU VM installation for Vagrant box Clients](#qemu-vm-installation-for-vagrant-box-clients)
          * [Put image into the Vagrant boxes](#put-image-into-the-vagrant-boxes)
    * [Vagrant with OpenStack](#vagrant-with-openstack)
       * [Preparing for Build Validation test with OpenStack](#preparing-for-build-validation-test-with-openstack)
