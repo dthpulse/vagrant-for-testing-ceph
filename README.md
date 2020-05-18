@@ -738,7 +738,7 @@ After VM shutdown **DO NOT START IT AGAIN**
 
 Continue with [Put image into the Vagrant boxes](#put-image-into-the-vagrant-boxes)
 
-##### QEMU VM installation for Vagrant box - Clients
+##### QEMU VM installation for Vagrant box Clients
 
 Make sure OS image is mounted under */srv/www/htdocs/client*
 
