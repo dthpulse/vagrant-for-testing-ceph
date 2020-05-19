@@ -5,7 +5,7 @@
 [//]: # (the new TOC will appear on stdout: the expectation is that the maintainer will do the rest.)
 
 * [Vagrant SES build validation](#vagrant-ses-build-validation)
-    * [Set-up Vagrang server](#set-up-vagrang-server)
+    * [Set-up Vagrant server](#set-up-vagrant-server)
        * [Requiered packages](#requiered-packages)
        * [Install SUSE certificate](#install-suse-certificate)
        * [Configure QEMU to run processes as root user](#configure-qemu-to-run-processes-as-root-user)
@@ -45,7 +45,7 @@
 
 Using native Vagrant files to build cluster with SES and running build validaion on it.
 
-### Set-up Vagrang server
+### Set-up Vagrant server
 
 #### Requiered packages
 
