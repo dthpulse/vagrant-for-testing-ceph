@@ -70,14 +70,14 @@ def custom_cmds(config_node, ip_address, host_fqdn, host_alias, node_packages, r
     
     # register SES if key is provided and SES deployment is set to 'true' in config.yaml 
     # repositories from SCC
-    if $config_yaml['deploy_ses'] and $config_yaml['use_scc_repos'] and !$config_yaml['ses_reg_key'].nil?
+    if $config_yaml['use_scc_repos'] and !$config_yaml['ses_reg_key'].nil?
        	config_node.vm.provision :shell, :inline => "echo 'register SES'; SUSEConnect -p ses/#{$config_yaml['ses_version_on_scc']}/x86_64 -r" + " " + $config_yaml['ses_reg_key']
-    elsif $config_yaml['deploy_ses'] and $config_yaml['use_scc_repos'] and !ENV['ses_reg_key'].nil?
+    elsif $config_yaml['use_scc_repos'] and !ENV['ses_reg_key'].nil?
        	config_node.vm.provision :shell, :inline => "echo 'register SES'; SUSEConnect -p ses/#{$config_yaml['ses_version_on_scc']}/x86_64 -r" + " " + ENV['ses_reg_key']
     end
     
     # repositories from custom http repo
-    if $config_yaml['deploy_ses'] and $config_yaml['use_custom_repos']
+    if $config_yaml['use_custom_repos']
         if !ENV['custom_repos'].nil?
             ENV['custom_repos'].each_line do |repo|
                 config_node.vm.provision :shell, :inline => "echo 'repositories from custom http repo'; zypper --gpg-auto-import-keys ar -G -f #{repo}"
@@ -166,32 +166,33 @@ end
 ################################################
 
 def bash_scripts(config, node_role)
-    
-    if node_role =~ /master/
-        run_on = "#{$config_yaml['master']['hostname']}"
-    elsif node_role =~ /osd_node/
-    	run_on = "#{$config_yaml['osd_node']['hostname']}" + rand(1..$config_yaml['osd_node']['number']).to_s
-    elsif node_role =~ /monitor/
-    	run_on = "#{$config_yaml['monitor']['hostname']}" + rand(1..$config_yaml['monitor']['number']).to_s
-    elsif node_role =~ /clients/
-    	if !$config_yaml['clients'].nil?
-            config.vm.provision "file", source: $project_dir + "/clients.conf", destination: "/tmp/clients.conf"
-            $config_yaml['clients'].each do |run_on|
-                if !$config_yaml[node_role + "_sh"].nil?
-                    config.vm.define run_on do |sh_list|
-                        $config_yaml[node_role + "_sh"].each do |bash_script|
-                            sh_list.vm.provision "shell", inline: "echo 'WWWWW #{bash_script} WWWWW'; /bin/sh /vagrant/scripts/#{bash_script}"
+    if $config_yaml['deploy_ses']
+        if node_role =~ /master/
+            run_on = "#{$config_yaml['master']['hostname']}"
+        elsif node_role =~ /osd_node/
+        	run_on = "#{$config_yaml['osd_node']['hostname']}" + rand(1..$config_yaml['osd_node']['number']).to_s
+        elsif node_role =~ /monitor/
+        	run_on = "#{$config_yaml['monitor']['hostname']}" + rand(1..$config_yaml['monitor']['number']).to_s
+        elsif node_role =~ /clients/
+        	if !$config_yaml['clients'].nil?
+                config.vm.provision "file", source: $project_dir + "/clients.conf", destination: "/tmp/clients.conf"
+                $config_yaml['clients'].each do |run_on|
+                    if !$config_yaml[node_role + "_sh"].nil?
+                        config.vm.define run_on do |sh_list|
+                            $config_yaml[node_role + "_sh"].each do |bash_script|
+                                sh_list.vm.provision "shell", inline: "echo 'WWWWW #{bash_script} WWWWW'; /bin/sh /vagrant/scripts/#{bash_script}"
+                            end
                         end
                     end
                 end
-            end
-    	end
-    end
-    
-    if !$config_yaml[node_role + "_sh"].nil? and node_role != /clients/
-        config.vm.define run_on do |sh_list|
-            $config_yaml[node_role + "_sh"].each do |bash_script|
-                sh_list.vm.provision "shell", inline: "echo 'WWWWW #{bash_script} WWWWW'; /bin/sh /vagrant/scripts/#{bash_script}"
+        	end
+        end
+        
+        if !$config_yaml[node_role + "_sh"].nil? and node_role != /clients/
+            config.vm.define run_on do |sh_list|
+                $config_yaml[node_role + "_sh"].each do |bash_script|
+                    sh_list.vm.provision "shell", inline: "echo 'WWWWW #{bash_script} WWWWW'; /bin/sh /vagrant/scripts/#{bash_script}"
+                end
             end
         end
     end
