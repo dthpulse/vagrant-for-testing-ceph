@@ -356,7 +356,7 @@ install these packages:
 zypper in ovmf qemu-arm
 ```
 
-in the folder [libvirt_files_for_aarch64_emulation](https://gitlab.suse.de/denispolom/vagrant_ses/-/tree/dpdev/mixed_arch%2Flibvirt_files_for_aarch64_emulation) are files that we have to copy in to the following locations:
+in the folder [libvirt_files_for_aarch64_emulation](https://gitlab.suse.de/denispolom/vagrant_ses/-/tree/master/mixed_arch/libvirt_files_for_aarch64_emulation) are files that we have to copy in to the following locations:
 
 ```bash
 /usr/share/qemu/aavmf-aarch64-code.bin
@@ -488,7 +488,7 @@ mount /qemu/iso/SUSE-Enterprise-Storage-7-DVD-aarch64-Milestone10-Media1.iso /sr
 
 ###### x86_64
 
-Insert [autoyast file](https://gitlab.suse.de/denispolom/vagrant_ses/-/blob/dpdev/autoyast/autoyast_intel.xml) into Apache DocumetnRoot directory
+Insert [autoyast file](https://gitlab.suse.de/denispolom/vagrant_ses/-/blob/master/autoyast/autoyast_intel.xml) into Apache DocumetnRoot directory
 
 ```
 cp autoyast_intel.xml /srv/www/htdocs
@@ -535,7 +535,7 @@ Continue with [Put image into the Vagrant boxes](#put-image-into-the-vagrant-box
 
 ###### AARCH64 and Mixed
 
-Insert [autoyast file](https://gitlab.suse.de/denispolom/vagrant_ses/-/blob/dpdev/autoyast/autoyast_aarch64.xml) into Apache DocumetnRoot directory
+Insert [autoyast file](https://gitlab.suse.de/denispolom/vagrant_ses/-/blob/master/autoyast/autoyast_aarch64.xml) into Apache DocumetnRoot directory
 
 ```
 cp autoyast_intel.xml /srv/www/htdocs
