@@ -227,6 +227,10 @@ iptables-resore /etc/iptables.conf
 
 We have to restore these rules after every system or libvirt service reboot.
 
+#### SSH keys
+
+Vagrant is looking for *storage-automation* public and private keys in `/root/.ssh/` path. If they are placed there we will be able to login without password to our deployed SES cluster. Thanks to *vagrnt-hostsupdater* plugin we can use hostnames we defined in YAML file.
+
 #### Setting up Docker registry cache
 
 Pull from registry.suse.com a specific version of the container image called "registry":
