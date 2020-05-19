@@ -45,6 +45,16 @@
 
 Using native Vagrant files to build cluster with SES and running build validaion on it.
 
+We have already everything ready and using server jupiter.qa.suse.cz for x86_64 or thunderx7.arch.suse.de for aarch64 testing.
+
+To login to the servers as root user use storage-automation key.
+
+For Build Validation it's enough to follow steps:
+
+- [Preparing for Build Validation tests](#preparing-for-build-validation-tests)
+
+- [Running Build Validation tests](#running-build-validation-tests)
+
 ### Set-up Vagrant server
 
 #### Requiered packages
