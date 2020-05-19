@@ -49,7 +49,7 @@ We have already everything ready and using server jupiter.qa.suse.cz for x86_64 
 
 To login to the servers as root user use storage-automation key.
 
-For Build Validation it's enough to follow steps:
+For Build Validation it's enough to follow steps described in:
 
 - [Preparing for Build Validation tests](#preparing-for-build-validation-tests)
 
