@@ -917,7 +917,22 @@ There is a server *ecp-registry.openstack.local* (IP 10.86.1.251, login with sto
 
 #### Preparing for Build Validation test with OpenStack
 
-We need to patch [cinder files]() to work with ECP.
+We need to patch [cinder files](https://gitlab.suse.de/denispolom/vagrant_ses/-/tree/master/openstack%2Fcinder) to work with ECP.
+
+Go to your vagrant home directory and run
+
+```
+cd .vagrant.d
+find . -name cinder.rb
+```
+
+replace the file with [cinder.rb](https://gitlab.suse.de/denispolom/vagrant_ses/-/tree/master/openstack%2Fcinder) 
+
+same for [cinder_spec.rb](https://gitlab.suse.de/denispolom/vagrant_ses/-/tree/master/openstack%2Fcinder)
+
+```
+find . -name cinder_spec.rb
+```
 
 ##### Creating OpenStack image
 
