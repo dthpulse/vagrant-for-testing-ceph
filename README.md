@@ -917,6 +917,8 @@ There is a server *ecp-registry.openstack.local* (IP 10.86.1.251, login with sto
 
 #### Preparing for Build Validation test with OpenStack
 
+We need to patch [cinder files]() to work with ECP.
+
 ##### Creating OpenStack image
 
 Download and source RC file from OpenStack.
