@@ -265,7 +265,7 @@ placement:
 ---
 service_type: osd
 placement:
-  host_pattern: '*#{$config_yaml['osd_node']['hostname']}*'
+  host_pattern: '*osd*'
 data_devices:
   all: true
 encrypted: #{$config_yaml['encryption']}
