@@ -411,8 +411,8 @@ Vagrant.configure("2") do |config|
                     libvirt_disk.disk_bus = 'virtio'
                     libvirt_disk.nic_model_type = 'virtio'
                     libvirt_disk.features = ["apic","gic version='2'"]
-                    libvirt_disk.nvram = File.join(Dir.pwd, "#{$config_yaml['aarch64_nvram']}")
-                    libvirt_disk.loader = $config_yaml['aarch64_loader']
+                    #libvirt_disk.nvram = File.join(Dir.pwd, "#{$config_yaml['aarch64_nvram']}")
+                    #libvirt_disk.loader = $config_yaml['aarch64_loader']
                 end
             end
         end

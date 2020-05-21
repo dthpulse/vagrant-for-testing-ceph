@@ -36,8 +36,8 @@ mixed_arch_cluster: true
 aarch64_box_name: 'sle15sp2snap15aarch64'
 aarch64_kernel: 'Image-5.3.18-16-default'
 aarch64_initrd: 'initrd-5.3.18-16-default'
-aarch64_nvram: 'aarch64_VARS.fd'
-aarch64_loader: '/usr/share/qemu/aavmf-aarch64-code.bin'
+#aarch64_nvram: 'aarch64_VARS.fd'
+#aarch64_loader: '/usr/share/qemu/aavmf-aarch64-code.bin'
 aarch_node:
         hostname: aarch-osd # Global hostname. Vagrant will add number to the end.
         domain: sestest
