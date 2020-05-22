@@ -236,26 +236,6 @@ sed -i '/REJECT/d' /etc/iptables.conf
 iptables-resore /etc/iptables.conf
 ```
 
-To automate this whenever *libvirtd* daemon starts we can configure [libvirt custom hook scripts](https://www.libvirt.org/hooks.html)
-
-```
-# cat /etc/libvirt/hooks/qemu
-
-#!/bin/bash
-for i in $(ip -o link show type bridge | awk '{print $2}')
-do
- i=${i//:/}
- iptables -D LIBVIRT_FWI -o $i -j REJECT --reject-with icmp-port-unreachable
- iptables -D LIBVIRT_FWO -i $i -j REJECT --reject-with icmp-port-unreachable
-done
-```
-
-and make it executable
-
-```
-chmod +x /etc/libvirt/hooks/qemu
-```
-
 #### SSH keys
 
 Vagrant is looking for *storage-automation* public and private keys in `/root/.ssh/` path. If they are placed there we will be able to login without password to our deployed SES cluster. Thanks to *vagrant-hostsupdater* plugin we can use hostnames we defined in YAML file.
