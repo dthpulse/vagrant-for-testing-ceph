@@ -236,12 +236,24 @@ sed -i '/REJECT/d' /etc/iptables.conf
 iptables-resore /etc/iptables.conf
 ```
 
-We have to restore these rules after every system or libvirt service reboot.
+To automate this whenever *libvirtd* daemon starts we can configure [libvirt custom hook scripts](https://www.libvirt.org/hooks.html)
 
 ```
-# cat /etc/profile.d/iptables.sh
+# cat /etc/libvirt/hooks/qemu
 
-iptables-restore /etc/iptables.conf
+#!/bin/bash
+for i in $(ip -o link show type bridge | awk '{print $2}')
+do
+ i=${i//:/}
+ iptables -D LIBVIRT_FWI -o $i -j REJECT --reject-with icmp-port-unreachable
+ iptables -D LIBVIRT_FWO -i $i -j REJECT --reject-with icmp-port-unreachable
+done
+```
+
+and make it executable
+
+```
+chmod +x /etc/libvirt/hooks/qemu
 ```
 
 #### SSH keys
