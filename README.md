@@ -238,6 +238,12 @@ iptables-resore /etc/iptables.conf
 
 We have to restore these rules after every system or libvirt service reboot.
 
+```
+# cat /etc/profile.d/iptables.sh
+
+iptables-restore /etc/iptables.conf
+```
+
 #### SSH keys
 
 Vagrant is looking for *storage-automation* public and private keys in `/root/.ssh/` path. If they are placed there we will be able to login without password to our deployed SES cluster. Thanks to *vagrant-hostsupdater* plugin we can use hostnames we defined in YAML file.
