@@ -39,11 +39,10 @@ function create_snapshot () {
         pdsh -w ${ses_cluster// /,} "rm -rf /var/log/scc_*"
         for node in $nodes
         do
-            virsh shutdown ${project}_${node} 
-            while [ "$(virsh domstate ${project}_${node})" != "shut off" ]
-            do
-                sleep 5
-            done
+            virsh destroy ${project}_${node} 
+        done
+        for node in $nodes
+        do
             virsh snapshot-create-as ${project}_${node} ${script%%.*}
         done
     fi

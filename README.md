@@ -1049,9 +1049,6 @@ If we are going to use `build_validation.sh` script then only these scripts need
 master_sh:
         - hosts_file_correction.sh
         - deploy_ses.sh
-
-monitor_sh:
-        - configure_ses.sh
 ```
 
 All other scripts are handled by *build_validation.sh* script
