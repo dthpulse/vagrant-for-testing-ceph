@@ -38,7 +38,10 @@ end
 #############################################
 def custom_cmds(config_node, ip_address, host_fqdn, host_alias, node_packages, role_cmds)
     config_node.vm.hostname = host_fqdn
-    config_node.vm.network "private_network", ip: "#{ip_address}"
+    config_node.vm.network "public_network", ip: "#{ip_address}",
+        :dev => "virbr0",
+        :mode => "bridge",
+        :type => "bridge"
     
     # set TERM env on guests
     config_node.vm.provision :shell, :inline => "echo 'export TERM=xterm-256color' > /etc/profile.d/vars.sh"
@@ -410,7 +413,10 @@ Vagrant.configure("2") do |config|
                 host_alias = client_box
                 host_fqdn = client_box + ".#{$config_yaml['osd_node']['domain']}"
                 config_node.vm.hostname = host_fqdn
-                config_node.vm.network :private_network, :ip => ip_address
+                config_node.vm.network :public_network, :ip => ip_address,
+                    :dev => "virbr0",
+                    :mode => "bridge",
+                    :type => "bridge"
                 hosts_file(ip_address, host_fqdn, host_alias, config_node)
                 config_node.hostsupdater.aliases = [host_fqdn, host_alias]
                 config_node.vm.provision :shell, :inline => "echo 'ssh access for master'; test ! -d /root/.ssh && mkdir /root/.ssh; chmod 700 /root/.ssh; echo '#{$pub_key}' >> /root/.ssh/authorized_keys; chmod 600 /root/.ssh/authorized_keys"
