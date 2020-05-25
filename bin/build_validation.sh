@@ -1,14 +1,58 @@
 #!/usr/bin/env bash 
 
-if [ -z "$1" ] || [ ! -e "$1" ]
+TEMP=$(getopt -o h --long "vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing" -n 'build_validation.sh' -- "$@")
+
+
+if [ $? -ne 0 ]; then echo "Terminating ..." >&2; exit 1; fi
+
+ses_only=false
+destroy=false
+all_scripts=false
+only_script=false
+existing=false
+
+function helpme () {
+  cat << EOF
+
+  usage: ./build_validation.sh --help
+  build_validation.sh [arguments]
+
+  arguments:
+    --vagrantfile        VAGRANTFILE
+    --ses-only           deploys only SES without running BV test scripts
+    --destroy            destroys project (vagrant destroy -f)
+    --all-scripts        runs all BV scripts under ./scripts directory
+    --only-script        runs only specified script
+    --existing           runs BV scripts on existing cluster
+
+EOF
+}
+
+eval set -- "$TEMP"
+
+while true
+do
+    case $1 in
+        --vagrantfile) export VAGRANT_VAGRANTFILE=$2; shift 2;;
+        --ses-only) ses_only=true; shift;;
+        --destroy) destroy=true; shift;;
+        --all-scripts) all_scripts=true; shift;;
+        --only-script) only_script=true; one_script+=($2); shift 2;;
+        --existing) existing=true; shift;;
+        --help|-h) helpme; exit;;
+        --) shift; break;;
+        *) break;;
+    esac
+done
+
+if [ -z "$VAGRANT_VAGRANTFILE" ]
 then
-    echo "missing argument <VAGRANTFILE>"
+    echo "Missing VAGRANTFILE"
     exit 1
 fi
 
 SECONDS=0
 
-vagrantfile=$1
 ses_deploy_scripts=(deploy_ses.sh hosts_file_correction.sh configure_ses.sh)
 project=$(basename $PWD)
 scripts=$(find scripts -maxdepth 1 -type f ! -name ${ses_deploy_scripts[0]} \
@@ -66,7 +110,9 @@ function revert_to_ses () {
  
     while [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health" 2>/dev/null)" != "HEALTH_OK" ]
     do
-        if [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health detail  --format=json | jq -r .checks.MGR_MODULE_ERROR.summary.message" 2>/dev/null)" == "Module 'dashboard' has failed: Timeout('Port 8443 not free on ::.',)" ]
+        if [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health detail  --format=json \
+                      | jq -r .checks.MGR_MODULE_ERROR.summary.message" 2>/dev/null)" \
+                      == "Module 'dashboard' has failed: Timeout('Port 8443 not free on ::.',)" ]
         then
             ssh $ssh_options ${monitors[0]%%.*} "systemctl restart ceph.target" 2>/dev/null
         fi
@@ -74,48 +120,75 @@ function revert_to_ses () {
     done
 }
 
-VAGRANT_VAGRANTFILE=$vagrantfile vagrant up 
+function nodes_list () {
+    nodes_list=($(vagrant status | awk '/libvirt/{print $1}'))
+}
 
-if [ $? -ne 0 ];then exit 1;fi
-
-nodes_list=($(VAGRANT_VAGRANTFILE=$vagrantfile vagrant status | awk '/libvirt/{print $1}'))
-
-source ${vagrantfile}-files/bashrc
-
+source ${VAGRANT_VAGRANTFILE}-files/bashrc
 monitors=($monitors)
 osd_nodes=($osd_nodes)
 ses_cluster=(${master} ${monitors[@]} ${osd_nodes[@]})
 
-
-vssh_script "${monitors[0]}" "configure_ses.sh" 
-
-create_snapshot "$(echo ${nodes_list[@]})" "deployment"
-
-
-for node in ${nodes_list[@]}
-do
-    virsh start ${project}_${node}
-done
-
-while [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health" 2>/dev/null)" != "HEALTH_OK" ]	 
-do
-        if [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health detail  --format=json | jq -r .checks.MGR_MODULE_ERROR.summary.message" 2>/dev/null)" == "Module 'dashboard' has failed: Timeout('Port 8443 not free on ::.',)" ]
-        then
-            ssh $ssh_options ${monitors[0]%%.*} "systemctl restart ceph.target" 2>/dev/null
-        fi
-    sleep 10
-done
-
-if [ ${#scripts[@]} -eq 0 ]
-then
+if $destroy
+then 
+    vagrant destroy -f
     exit
 fi
 
-for script in ${scripts[@]}
-do
-    vssh_script "${monitors[0]%%.*}" "$script"
-    create_snapshot "$(echo ${ses_cluster[@]%%.*})" "$script"
-    revert_to_ses
-done
+if ! $existing
+then
+    sed -i 's/deploy_ses: .*/deploy_ses: true/' ${VAGRANT_VAGRANTFILE}.yaml
+
+    vagrant up 
+    
+    if [ $? -ne 0 ];then exit 1;fi
+
+    nodes_list
+    
+    vssh_script "${monitors[0]}" "configure_ses.sh" 
+    
+    create_snapshot "$(echo ${nodes_list[@]})" "deployment"
+    
+    for node in ${nodes_list[@]}
+    do
+        virsh start ${project}_${node}
+    done
+    
+    while [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health" 2>/dev/null)" != "HEALTH_OK" ]	 
+    do
+            if [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health detail  --format=json \
+                          | jq -r .checks.MGR_MODULE_ERROR.summary.message" 2>/dev/null)" \
+                          == "Module 'dashboard' has failed: Timeout('Port 8443 not free on ::.',)" ]
+            then
+                ssh $ssh_options ${monitors[0]%%.*} "systemctl restart ceph.target" 2>/dev/null
+            fi
+        sleep 10
+    done
+fi
+    
+if $ses_only && ! $all_scripts || $ses_only && ! $only_script; then exit; fi
+
+if $all_scripts
+then
+    if [ ${#scripts[@]} -eq 0 ]
+    then
+        exit
+    fi
+    
+    for script in ${scripts[@]}
+    do
+        vssh_script "${monitors[0]%%.*}" "$script"
+        create_snapshot "$(echo ${ses_cluster[@]%%.*})" "$script"
+        revert_to_ses
+    done
+elif $only_script
+then
+    for script in ${one_script[@]}
+    do
+        vssh_script "${monitors[0]%%.*}" "$script"
+        create_snapshot "$(echo ${ses_cluster[@]%%.*})" "$script"
+        revert_to_ses
+    done
+fi
 
 echo "$SECONDS seconds elapsed in $(basename $0)"
