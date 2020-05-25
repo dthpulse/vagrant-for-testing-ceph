@@ -1058,7 +1058,25 @@ In most cases nothing more needs to be edited.
 Run test:
 
 ```
-./build_validation.sh SES7_Build_Validation 2>&1 | tee -a logfile.log
+# ./build_validation.sh -h
+
+  usage: ./build_validation.sh --help
+  build_validation.sh [arguments]
+
+  arguments:
+    --vagrantfile        VAGRANTFILE
+    --ses-only           deploys only SES without running BV test scripts
+    --destroy            destroys project (vagrant destroy -f)
+    --all-scripts        runs all BV scripts under ./scripts directory
+    --only-script        runs only specified script
+    --existing           runs BV scripts on existing cluster
+
+```
+
+Example:
+
+```
+./build_validation.sh --vagrantfile SES7_Build_validation --all-scripts 2>&1 | tee -a logfile.log
 ```
 
 What is script doing:
