@@ -56,7 +56,7 @@ ssh $nfs_server "systemctl start rpcbind.socket"
 for client in $(cat /tmp/clients.conf)
 do
     cat << EOF | ssh $client
-    mount -t nfs ${nfs_server}:/ /mnt
+    mount -t nfs -o nfsvers=4.2 ${nfs_server}:/ /mnt
     
     touch /mnt/\$HOSTNAME
     
