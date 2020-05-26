@@ -21,6 +21,7 @@ do
 
 if [ -x "\$(command -v zypper)" ]
 then 
+    SUSEConnect -r deedc51104e549deb
     zypper in -y ceph-common
 fi
 
@@ -29,7 +30,7 @@ then
     yum install -y ceph-common
 fi
 
-if [ -x "i\$(command -v apt-get)" ]
+if [ -x "\$(command -v apt-get)" ]
 then 
     apt-get install -y ceph-common
 fi
