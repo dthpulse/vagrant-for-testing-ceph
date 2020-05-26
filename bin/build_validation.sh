@@ -1,6 +1,6 @@
 #!/usr/bin/env bash 
 
-TEMP=$(getopt -o h --long "vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing" -n 'build_validation.sh' -- "$@")
+TEMP=$(getopt -o h --long "vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,vagrant-box:" -n 'build_validation.sh' -- "$@")
 
 
 if [ $? -ne 0 ]; then echo "Terminating ..." >&2; exit 1; fi
@@ -10,6 +10,7 @@ destroy=false
 all_scripts=false
 only_script=false
 existing=false
+only_salt_cluster=false
 
 function helpme () {
   cat << EOF
@@ -24,6 +25,8 @@ function helpme () {
     --all-scripts        runs all BV scripts under ./scripts directory
     --only-script        runs only specified script
     --existing           runs BV scripts on existing cluster
+    --only-salt-cluster  deploys cluster with salt
+    --vagrant-box        vagrant box name
 
 EOF
 }
@@ -39,6 +42,8 @@ do
         --all-scripts) all_scripts=true; shift;;
         --only-script) only_script=true; one_script+=($2); shift 2;;
         --existing) existing=true; shift;;
+        --only-salt-cluster) only_salt_cluster=true; shift;;
+        --vagrant-box) vagrant_box=$2; shift 2;;
         --help|-h) helpme; exit;;
         --) shift; break;;
         *) break;;
@@ -135,7 +140,19 @@ fi
 
 if ! $existing
 then
-    sed -i 's/deploy_ses: .*/deploy_ses: true/' ${VAGRANT_VAGRANTFILE}.yaml
+    if ! $only_salt_cluster
+    then
+        sed -i 's/deploy_ses: .*/deploy_ses: true/' ${VAGRANT_VAGRANTFILE}.yaml
+    else
+        sed -i 's/deploy_ses: .*/deploy_ses: false/' ${VAGRANT_VAGRANTFILE}.yaml
+    fi
+
+    if [ -z "$vagrant_box" ]
+    then
+        echo "Missing --vagrant-box-name parameter"
+    else
+        sed -i "s/ses_cl_box: .*/ses_cl_box: $vagrant_box/" ${VAGRANT_VAGRANTFILE}.yaml
+    fi
 
     vagrant up 
     
@@ -168,7 +185,11 @@ else
     set_variables
 fi
     
-if $ses_only && ! $all_scripts || $ses_only && ! $only_script; then exit; fi
+if $ses_only && ! $all_scripts \
+|| $ses_only && ! $only_script \
+|| $ses_only && $only_salt_cluster; then 
+exit
+fi
 
 if $all_scripts
 then
