@@ -36,6 +36,11 @@ ceph-salt export > myconfig.json
 
 ceph-salt apply --non-interactive
 
+for node in ${osd_nodes[@]%%.*}
+do
+    ceph orch host add $node
+done
+
 ceph orch apply -i /root/cluster.yaml
 
 # wait until all OSDs are deployed
