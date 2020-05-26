@@ -120,14 +120,12 @@ function revert_to_ses () {
     done
 }
 
-function nodes_list () {
-    nodes_list=($(vagrant status | awk '/libvirt/{print $1}'))
-}
-
+function set_variables () {
 source ${VAGRANT_VAGRANTFILE}-files/bashrc
 monitors=($monitors)
 osd_nodes=($osd_nodes)
 ses_cluster=(${master} ${monitors[@]} ${osd_nodes[@]})
+}
 
 if $destroy
 then 
@@ -142,8 +140,10 @@ then
     vagrant up 
     
     if [ $? -ne 0 ];then exit 1;fi
+ 
+    set_variables
 
-    nodes_list
+    nodes_list=($(vagrant status | awk '/libvirt/{print $1}'))
     
     vssh_script "${monitors[0]}" "configure_ses.sh" 
     
@@ -164,6 +164,8 @@ then
             fi
         sleep 10
     done
+else
+    set_variables
 fi
     
 if $ses_only && ! $all_scripts || $ses_only && ! $only_script; then exit; fi
