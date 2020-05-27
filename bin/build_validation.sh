@@ -218,13 +218,10 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
         echo "missing --sle_slp_dir or --ses_slp_dir"
         exit 1
     fi
-    if [ "$(arch)" == "x86_64" ];then
-        ln -s $(dirname $(realpath $0))/../autoyast/autoyast_intel.xml /srv/www/htdocs/autoyast_intel.xml
-    elif [ "$(arch)" == "aarch64" ];then
-        ln -s $(dirname $(realpath $0))/../autoyast/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml
-    fi
     
     if [ "$(arch)" == "x86_64" ]; then
+        ln -s $(dirname $(realpath $0))/../autoyast/autoyast_intel.xml /srv/www/htdocs/autoyast_intel.xml
+
         virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
         --disk bus=virtio,path=/qemu/pools/default/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
         --network bridge=virbr0,model=virtio --connect qemu:///system  --os-type linux \
@@ -232,6 +229,8 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
         --location http://192.168.122.1/current_os \
         --extra-args="console=tty0 console=ttyS0,115200n8 autoyast=http://192.168.122.1/autoyast_intel.xml"
     elif [ "$(arch)" == "aarch64" ];then
+        ln -s $(dirname $(realpath $0))/../autoyast/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml
+
         virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
         --disk bus=virtio,path=/qemu/pools/default/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
         --network bridge=virbr0,model=virtio --connect qemu:///system  --os-type linux \
