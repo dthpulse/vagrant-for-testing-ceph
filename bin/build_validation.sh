@@ -157,7 +157,7 @@ then
 
     if [ -z "$vagrant_box" ]
     then
-        echo "Missing --vagrant-box-name parameter"
+        echo "Missing --vagrant-box parameter"
     else
         sed -i "s/ses_cl_box: .*/ses_cl_box: $vagrant_box/" ${VAGRANT_VAGRANTFILE}.yaml
     fi
