@@ -504,7 +504,7 @@ mount /qemu/iso/SUSE-Enterprise-Storage-7-DVD-aarch64-Milestone10-Media1.iso /sr
 Insert [autoyast file](https://gitlab.suse.de/denispolom/vagrant_ses/-/blob/master/autoyast/autoyast_intel.xml) into Apache DocumetnRoot directory
 
 ```
-cp autoyast_intel.xml /srv/www/htdocs
+cp autoyast/autoyast_intel.xml /srv/www/htdocs
 ```
 
 Make sure OS image is mounted under */srv/www/htdocs/current_os*
@@ -551,7 +551,7 @@ Continue with [Put image into the Vagrant boxes](#put-image-into-the-vagrant-box
 Insert [autoyast file](https://gitlab.suse.de/denispolom/vagrant_ses/-/blob/master/autoyast/autoyast_aarch64.xml) into Apache DocumetnRoot directory
 
 ```
-cp autoyast_intel.xml /srv/www/htdocs
+cp autoyast/autoyast_aarch64.xml /srv/www/htdocs
 ```
 
 Make sure OS image is mounted under */srv/www/htdocs/current_os*
