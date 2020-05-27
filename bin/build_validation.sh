@@ -139,7 +139,9 @@ if $destroy
 then 
     vagrant destroy -f
     exit
-elif $destroy_b4_deploy
+fi
+
+if $destroy_b4_deploy
 then
     vagrant destroy -f
 fi
