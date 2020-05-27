@@ -46,7 +46,7 @@ do
         --existing) existing=true; shift;;
         --only-salt-cluster) only_salt_cluster=true; shift;;
         --vagrant-box) vagrant_box=$2; shift 2;;
-        ----destroy-before-deploy) destroy_b4_deploy=true; shift;;
+        --destroy-before-deploy) destroy_b4_deploy=true; shift;;
         --help|-h) helpme; exit;;
         --) shift; break;;
         *) break;;
