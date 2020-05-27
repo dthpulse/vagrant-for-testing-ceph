@@ -32,7 +32,7 @@ function helpme () {
     --only-salt-cluster      deploys cluster with salt
     --vagrant-box            vagrant box name
     --sle-slp-dir            directory of SLE Full SLP (example: SLE-15-SP2-Full-Snapshot16)
-    --ses-slp-dir            directory of SES SLP (example: SUSE-Enterprise-Storage-7-Internal-Milestone11)
+    --ses-slp-dir            directory of SES SLP (example: SUSE-Enterprise-Storage-7-Milestone11)
     --destroy-before-deploy  destroys existing cluster before deployment (useful for Jenkins)
 
 EOF
