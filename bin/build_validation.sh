@@ -1,6 +1,6 @@
 #!/usr/bin/env bash 
 
-TEMP=$(getopt -o h --long "vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,vagrant-box:" -n 'build_validation.sh' -- "$@")
+TEMP=$(getopt -o h --long "vagrantfile:,ses-only,destroy,destroy-before-deploy,all-scripts,only-script:,existing,only-salt-cluster,vagrant-box:" -n 'build_validation.sh' -- "$@")
 
 
 if [ $? -ne 0 ]; then echo "Terminating ..." >&2; exit 1; fi
@@ -11,6 +11,7 @@ all_scripts=false
 only_script=false
 existing=false
 only_salt_cluster=false
+destroy_b4_deploy=false
 
 function helpme () {
   cat << EOF
@@ -19,14 +20,15 @@ function helpme () {
   build_validation.sh [arguments]
 
   arguments:
-    --vagrantfile        VAGRANTFILE
-    --ses-only           deploys only SES without running BV test scripts
-    --destroy            destroys project (vagrant destroy -f)
-    --all-scripts        runs all BV scripts under ./scripts directory
-    --only-script        runs only specified script
-    --existing           runs BV scripts on existing cluster
-    --only-salt-cluster  deploys cluster with salt
-    --vagrant-box        vagrant box name
+    --vagrantfile            VAGRANTFILE
+    --ses-only               deploys only SES without running BV test scripts
+    --destroy                destroys project (vagrant destroy -f)
+    --all-scripts            runs all BV scripts under ./scripts directory
+    --only-script            runs only specified script
+    --existing               runs BV scripts on existing cluster
+    --only-salt-cluster      deploys cluster with salt
+    --vagrant-box            vagrant box name
+    --destroy-before-deploy  destroys existing cluster before deployment (useful for Jenkins)
 
 EOF
 }
@@ -44,6 +46,7 @@ do
         --existing) existing=true; shift;;
         --only-salt-cluster) only_salt_cluster=true; shift;;
         --vagrant-box) vagrant_box=$2; shift 2;;
+        ----destroy-before-deploy) destroy_b4_deploy=true; shift;;
         --help|-h) helpme; exit;;
         --) shift; break;;
         *) break;;
@@ -136,6 +139,9 @@ if $destroy
 then 
     vagrant destroy -f
     exit
+elif $destroy_b4_deploy
+then
+    vagrant destroy -f
 fi
 
 if ! $existing
