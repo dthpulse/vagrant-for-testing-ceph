@@ -70,6 +70,11 @@ then
     exit 1
 fi
 
+if [ -d "logs" ];then
+    tar cvJf logs_$(date +%F).txz logs
+    rm -rf logs
+fi
+
 mkdir logs 2>/dev/null
 
 function vssh_script () {
@@ -166,7 +171,6 @@ end
 EOF
 }
 
-SECONDS=0
 
 ses_deploy_scripts=(deploy_ses.sh hosts_file_correction.sh configure_ses.sh)
 project=$(basename $PWD)
@@ -175,6 +179,7 @@ scripts=$(find scripts -maxdepth 1 -type f ! -name ${ses_deploy_scripts[0]} \
 ssh_options="-i ~/.ssh/storage-automation -l root"
 qemu_default_pool="$(virsh pool-dumpxml default | grep path | sed 's/<.path>//; s/<path>//')"
 
+### Creates repo files
 cat << EOF > /srv/www/htdocs/current_os.repo
 [basesystem]
 name=basesystem
@@ -211,6 +216,7 @@ gpgkey=$ses_url/repodata/repomd.xml.key
 enabled=1
 EOF
 
+### creates vagrnat box from SLP repo if box not already exists
 new_vagrant_box="${sle_slp_dir,,}"
 new_vagrant_box="${vagrant_box//-/}"
 if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)" ];then
@@ -239,15 +245,22 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
         --extra-args="console=ttyAMA0,115200n8 autoyast=http://192.168.122.1/autoyast_aarch64.xml"
     fi
     
+    echo
+    echo "Waiting till vgrbox installation finish"
     while [ "$(virsh domstate vgrbox)" != "shut off" ];do sleep 60;done
     
+    echo 
+    echo "Starting vgrbox for 2nd stage"
     virsh start vgrbox
     
     sleep 10
     
+    echo
+    echo "Waiting till vgrbox 2nd stage installation finish"
     while [ "$(virsh domstate vgrbox)" != "shut off" ];do sleep 60;done
     
     vagrant_box="$new_vagrant_box"
+    echo "creating vagrant box $vagrant_box"
     
     mkdir -p $VAGRANT_HOME/boxes/$vagrant_box/0/libvirt || exit 1
     
@@ -272,17 +285,20 @@ else
     vagrant_box="$new_vagrant_box"
 fi
 
+### destroy existing cluster
 if $destroy
 then 
     vagrant destroy -f
     exit
 fi
 
+### destroy existing cluster before deploy (useful for Jenkins)
 if $destroy_b4_deploy
 then
     vagrant destroy -f
 fi
 
+### creates nodes and deploys SES 
 if ! $existing
 then
     if ! $only_salt_cluster
@@ -330,12 +346,16 @@ else
     set_variables
 fi
     
+
+### exit if SES only is required 
+### or if only Salt cluster is required
 if $ses_only && ! $all_scripts \
 || $ses_only && ! $only_script \
 || $ses_only && $only_salt_cluster; then 
 exit
 fi
 
+### runs BV scripts
 if $all_scripts
 then
     if [ ${#scripts[@]} -eq 0 ]
@@ -359,4 +379,5 @@ then
     done
 fi
 
-echo "$SECONDS seconds elapsed in $(basename $0)"
+echo "List of failed scripts:"
+virsh snapshot-list --name ${project}_master | grep -v deployment
