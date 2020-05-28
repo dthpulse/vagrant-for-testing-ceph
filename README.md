@@ -1083,7 +1083,9 @@ Run test:
 Example:
 
 ```
-./build_validation.sh --vagrantfile SES7_Build_validation --destroy-before-deploy --all-scripts --sle-slp-dir SLE-15-SP2-Full-Snapshot16 --ses-slp-dir SUSE-Enterprise-Storage-7-Milestone11
+./build_validation.sh --vagrantfile SES7_Build_validation --destroy-before-deploy \
+--all-scripts --sle-slp-dir SLE-15-SP2-Full-Snapshot16 \
+--ses-slp-dir SUSE-Enterprise-Storage-7-Milestone11
 ```
 
 What is script doing:
