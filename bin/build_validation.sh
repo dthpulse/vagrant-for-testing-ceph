@@ -239,7 +239,7 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
             mv  /srv/www/htdocs/autoyast_intel.xml /srv/www/htdocs/autoyast_intel.xml.$(date +%F-%H%M)
         fi
         cp $(dirname $(realpath $0))/../autoyast/autoyast_intel.xml /srv/www/htdocs/autoyast_intel.xml
-        sed -i "s/REPLACE_ME/$sle_url/g" /srv/www/htdocs/autoyast_intel.xml
+        sed -i "s/REPLACE_ME/${sle_url//\//\\/}/g" /srv/www/htdocs/autoyast_intel.xml
 
         virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
         --disk bus=virtio,path=/qemu/pools/default/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
@@ -252,7 +252,7 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
             mv  /srv/www/htdocs/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml.$(date +%F-%H%M)
         fi
         cp $(dirname $(realpath $0))/../autoyast/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml
-        sed -i "s/REPLACE_ME/$sle_url/g" /srv/www/htdocs/autoyast_aarch64.xml
+        sed -i "s/REPLACE_ME/${sle_url//\//\\/}/g" /srv/www/htdocs/autoyast_aarch64.xml
 
         virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
         --disk bus=virtio,path=/qemu/pools/default/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
