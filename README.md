@@ -449,7 +449,7 @@ enabled=1
 
 ### Preparing for Build Validation tests
 
-*Steps in this chapter are not needed if you are going to use _build_validation.sh_ script. Script can do it for you automatically*
+**Steps in this chapter are not needed if you are going to use _build_validation.sh_ script. Script can do it for you automatically**
 
 #### Creating Vagrant Box
 
