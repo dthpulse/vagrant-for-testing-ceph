@@ -64,7 +64,7 @@ do
     esac
 done
 
-if [ -z "$VAGRANT_VAGRANTFILE" ]
+if [ -z "$vagrantfile" ]
 then
     echo "Missing VAGRANTFILE"
     exit 1
