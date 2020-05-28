@@ -217,15 +217,15 @@ clients_sh:
 # For clients is reservated the ip address range >= xxx.xxx.xxx.220
 clients_last_octet: 220
 clients:
-        - sles11sp4
-        - sles12sp4
-        #- sle15
-        - sle15sp1
-        #- sles-es74
-        #- sles-es75
-        - sles-es76
-        - sles-es80
-        - ubuntu164
-        - ubuntu184
-        - ubuntu204
-        #- fedora28
+        #- sles11sp4
+        #- sles12sp4
+        ##- sle15
+        #- sle15sp1
+        ##- sles-es74
+        ##- sles-es75
+        #- sles-es76
+        #- sles-es80
+        #- ubuntu164
+        #- ubuntu184
+        #- ubuntu204
+        ##- fedora28
