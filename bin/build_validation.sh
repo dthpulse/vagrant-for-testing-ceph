@@ -280,7 +280,7 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
     
     systemctl restart libvirtd
     
-    rm -f /srv/www/htdocs/autoyast_intel.xml
+    rm -f /srv/www/htdocs/autoyast_{intel,aarch64}.xml
 else
     vagrant_box="$new_vagrant_box"
 fi
