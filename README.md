@@ -449,6 +449,8 @@ enabled=1
 
 ### Preparing for Build Validation tests
 
+*Steps in this chapter are not needed if you are going to use _build_validation.sh_ script. Script can do it for you automatically*
+
 #### Creating Vagrant Box
 
 In this example we are going to use SLE-15-SP2-Snapshot15 and SES7-M10.
