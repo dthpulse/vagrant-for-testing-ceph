@@ -43,7 +43,7 @@ eval set -- "$TEMP"
 while true
 do
     case $1 in
-        --vagrantfile) vagrantfile=$2; shift 2;;
+        --vagrantfile) export VAGRANT_VAGRANTFILE=$2; shift 2;;
         --ses-only) ses_only=true; shift;;
         --destroy) destroy=true; shift;;
         --all-scripts) all_scripts=true; shift;;
@@ -64,7 +64,7 @@ do
     esac
 done
 
-if [ -z "$vagrantfile" ]
+if [ -z "$VAGRANT_VAGRANTFILE" ]
 then
     echo "Missing VAGRANTFILE"
     exit 1
@@ -177,7 +177,7 @@ function destroy_on_aarch64 () {
     virsh list --all --name | grep -w $project | xargs -I {} virsh undefine {} --nvram
     rm -f ${qemu_default_pool}/${project}_*
     systemctl restart libvirtd
-    VAGRANT_VAGRANTFILE=$vagrantfile vagrant destroy -f
+    vagrant destroy -f
 }
 
 ses_deploy_scripts=(deploy_ses.sh hosts_file_correction.sh configure_ses.sh)
@@ -309,7 +309,7 @@ fi
 
 ### destroy existing cluster
 if $destroy && [ "$(arch)" == "x86_64" ];then
-    VAGRANT_VAGRANTFILE=$vagrantfile vagrant destroy -f
+    vagrant destroy -f
     exit
 elif $destroy && [ "$(arch)" == "aarch64" ];then
     destroy_on_aarch64
@@ -318,7 +318,7 @@ fi
 
 ### destroy existing cluster before deploy (useful for Jenkins)
 if $destroy_b4_deploy && [ "$(arch)" == "x86_64" ];then
-    VAGRANT_VAGRANTFILE=$vagrantfile vagrant destroy -f
+    vagrant destroy -f
 elif $destroy_b4_deploy && [ "$(arch)" == "aarch64" ];then
     destroy_on_aarch64
 fi
@@ -340,13 +340,13 @@ then
         sed -i "s/ses_cl_box: .*/ses_cl_box: $vagrant_box/" ${VAGRANT_VAGRANTFILE}.yaml
     fi
 
-    VAGRANT_VAGRANTFILE=$vagrantfile vagrant up 
+    vagrant up 
     
     if [ $? -ne 0 ];then exit 1;fi
  
     set_variables
 
-    nodes_list=($(VAGRANT_VAGRANTFILE=$vagrantfile vagrant status | awk '/libvirt/{print $1}'))
+    nodes_list=($(vagrant status | awk '/libvirt/{print $1}'))
     
     vssh_script "${monitors[0]}" "configure_ses.sh" 
     
