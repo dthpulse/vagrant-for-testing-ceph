@@ -218,7 +218,7 @@ EOF
 
 ### creates vagrnat box from SLP repo if box not already exists
 new_vagrant_box="${sle_slp_dir,,}"
-new_vagrant_box="${vagrant_box//-/}"
+new_vagrant_box="${new_vagrant_box//-/}"
 if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)" ];then
     if [ -z "$sle_slp_dir" ] || [ -z "$ses_slp_dir" ];then
         echo "missing --sle_slp_dir or --ses_slp_dir"
