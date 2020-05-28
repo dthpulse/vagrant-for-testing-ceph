@@ -30,7 +30,7 @@ function helpme () {
     --only-script            runs only specified script
     --existing               runs BV scripts on existing cluster
     --only-salt-cluster      deploys cluster with salt
-    --vagrant-box            vagrant box name
+    --vagrant-box            existing vagrant box name. Don't use with option --sle-slp-dir. 
     --sle-slp-dir            directory of SLE Full SLP (example: SLE-15-SP2-Full-Snapshot16)
     --ses-slp-dir            directory of SES SLP (example: SUSE-Enterprise-Storage-7-Milestone11)
     --destroy-before-deploy  destroys existing cluster before deployment (useful for Jenkins)
@@ -171,6 +171,13 @@ end
 EOF
 }
 
+function destroy_on_aarch64 () {
+    virsh list --all --name | grep -w $project | xargs -I {} virsh destroy {}
+    virsh list --all --name | grep -w $project | xargs -I {} virsh undefine {} --nvram
+    rm -f ${qemu_default_pool}/${project}_*
+    systemctl restart libvirtd
+    vagrant destroy -f
+}
 
 ses_deploy_scripts=(deploy_ses.sh hosts_file_correction.sh configure_ses.sh)
 project=$(basename $PWD)
@@ -286,16 +293,19 @@ else
 fi
 
 ### destroy existing cluster
-if $destroy
-then 
+if $destroy && [ "$(arch)" == "x86_64" ];then
     vagrant destroy -f
+    exit
+elif $destroy && [ "$(arch)" == "aarch64" ];then
+    destroy_on_aarch64
     exit
 fi
 
 ### destroy existing cluster before deploy (useful for Jenkins)
-if $destroy_b4_deploy
-then
+if $destroy_b4_deploy && [ "$(arch)" == "x86_64" ];then
     vagrant destroy -f
+elif $destroy_b4_deploy && [ "$(arch)" == "aarch64" ];then
+    destroy_on_aarch64
 fi
 
 ### creates nodes and deploys SES 

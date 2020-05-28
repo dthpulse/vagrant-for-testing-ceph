@@ -1066,19 +1066,24 @@ Run test:
   build_validation.sh [arguments]
 
   arguments:
-    --vagrantfile        VAGRANTFILE
-    --ses-only           deploys only SES without running BV test scripts
-    --destroy            destroys project (vagrant destroy -f)
-    --all-scripts        runs all BV scripts under ./scripts directory
-    --only-script        runs only specified script
-    --existing           runs BV scripts on existing cluster
+    --vagrantfile            VAGRANTFILE
+    --ses-only               deploys only SES without running BV test scripts
+    --destroy                destroys project (vagrant destroy -f)
+    --all-scripts            runs all BV scripts under ./scripts directory
+    --only-script            runs only specified script
+    --existing               runs BV scripts on existing cluster
+    --only-salt-cluster      deploys cluster with salt
+    --vagrant-box            vagrant box name. Don't use with option --sle-slp-dir.
+    --sle-slp-dir            directory of SLE Full SLP (example: SLE-15-SP2-Full-Snapshot16)
+    --ses-slp-dir            directory of SES SLP (example: SUSE-Enterprise-Storage-7-Milestone11)
+    --destroy-before-deploy  destroys existing cluster before deployment (useful for Jenkins)
 
 ```
 
 Example:
 
 ```
-./build_validation.sh --vagrantfile SES7_Build_validation --all-scripts 2>&1 | tee -a logfile.log
+./build_validation.sh --vagrantfile SES7_Build_validation --destroy-before-deploy --all-scripts --sle-slp-dir SLE-15-SP2-Full-Snapshot16 --ses-slp-dir SUSE-Enterprise-Storage-7-Milestone11
 ```
 
 What is script doing:
