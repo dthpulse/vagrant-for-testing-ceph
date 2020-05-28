@@ -186,6 +186,7 @@ scripts=$(find scripts -maxdepth 1 -type f ! -name ${ses_deploy_scripts[0]} \
      -and ! -name ${ses_deploy_scripts[1]} -and ! -name ${ses_deploy_scripts[2]} -exec basename {} \;)
 ssh_options="-i ~/.ssh/storage-automation -l root"
 qemu_default_pool="$(virsh pool-dumpxml default | grep path | sed 's/<.path>//; s/<path>//')"
+libvirt_default_ip="$(virsh net-dumpxml default | awk '/ip address/{print $2}' | cut -d = -f 2 | sed "s/'//g")"
 
 ### Creates repo files
 cat << EOF > /srv/www/htdocs/current_os.repo
@@ -234,23 +235,31 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
     fi
     
     if [ "$(arch)" == "x86_64" ]; then
-        ln -s $(dirname $(realpath $0))/../autoyast/autoyast_intel.xml /srv/www/htdocs/autoyast_intel.xml
+        if [ -f "/srv/www/htdocs/autoyast_intel.xml" ];then
+            mv  /srv/www/htdocs/autoyast_intel.xml /srv/www/htdocs/autoyast_intel.xml.$(date +%F-%H%M)
+        fi
+        cp $(dirname $(realpath $0))/../autoyast/autoyast_intel.xml /srv/www/htdocs/autoyast_intel.xml
+        sed -i "s/REPLACE_ME/$sle_url/g" /srv/www/htdocs/autoyast_intel.xml
 
         virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
         --disk bus=virtio,path=/qemu/pools/default/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
         --network bridge=virbr0,model=virtio --connect qemu:///system  --os-type linux \
         --os-variant sle15sp2 --virt-type kvm --noautoconsole --accelerate \
         --location $sle_url \
-        --extra-args="console=tty0 console=ttyS0,115200n8 autoyast=http://192.168.122.1/autoyast_intel.xml"
+        --extra-args="console=tty0 console=ttyS0,115200n8 autoyast=http://$libvirt_default_ip/autoyast_intel.xml"
     elif [ "$(arch)" == "aarch64" ];then
-        ln -s $(dirname $(realpath $0))/../autoyast/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml
+        if [ -f "/srv/www/htdocs/autoyast_aarch64.xml" ];then
+            mv  /srv/www/htdocs/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml.$(date +%F-%H%M)
+        fi
+        cp $(dirname $(realpath $0))/../autoyast/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml
+        sed -i "s/REPLACE_ME/$sle_url/g" /srv/www/htdocs/autoyast_aarch64.xml
 
         virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
         --disk bus=virtio,path=/qemu/pools/default/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
         --network bridge=virbr0,model=virtio --connect qemu:///system  --os-type linux \
         --os-variant sle15sp2 --arch aarch64 --noautoconsole --accelerate \
         --location $sle_url \
-        --extra-args="console=ttyAMA0,115200n8 autoyast=http://192.168.122.1/autoyast_aarch64.xml"
+        --extra-args="console=ttyAMA0,115200n8 autoyast=http://$libvirt_default_ip/autoyast_aarch64.xml"
     fi
     
     echo
