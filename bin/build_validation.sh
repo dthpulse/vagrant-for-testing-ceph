@@ -53,10 +53,10 @@ do
         --vagrant-box) vagrant_box=$2; shift 2;;
         --destroy-before-deploy) destroy_b4_deploy=true; shift;;
         --sle-slp-dir) sle_slp_dir=$2 
-                       sle_url="http://download.suse.de/install/SLP/$sle_slp_dir/x86_64/DVD1"
+                       sle_url="http://download.suse.de/install/SLP/$sle_slp_dir/$(arch)/DVD1"
                        shift 2;;
         --ses-slp-dir) ses_slp_dir=$2
-                       ses_url="http://download.suse.de/install/SLP/$ses_slp_dir/x86_64/DVD1"
+                       ses_url="http://download.suse.de/install/SLP/$ses_slp_dir/$(arch)/DVD1"
                        shift 2;;
         --help|-h) helpme; exit;;
         --) shift; break;;
@@ -240,7 +240,7 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
         --disk bus=virtio,path=/qemu/pools/default/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
         --network bridge=virbr0,model=virtio --connect qemu:///system  --os-type linux \
         --os-variant sle15sp2 --virt-type kvm --noautoconsole --accelerate \
-        --location http://192.168.122.1/current_os \
+        --location $sle_url \
         --extra-args="console=tty0 console=ttyS0,115200n8 autoyast=http://192.168.122.1/autoyast_intel.xml"
     elif [ "$(arch)" == "aarch64" ];then
         ln -s $(dirname $(realpath $0))/../autoyast/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml
@@ -249,7 +249,7 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
         --disk bus=virtio,path=/qemu/pools/default/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
         --network bridge=virbr0,model=virtio --connect qemu:///system  --os-type linux \
         --os-variant sle15sp2 --arch aarch64 --noautoconsole --accelerate \
-        --location http://192.168.122.1/current_os \
+        --location $sle_url \
         --extra-args="console=ttyAMA0,115200n8 autoyast=http://192.168.122.1/autoyast_aarch64.xml"
     fi
     
@@ -277,7 +277,12 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
     
     mv $qemu_default_pool/vgrbox.qcow2 $VAGRANT_HOME/boxes/$vagrant_box/0/libvirt/box.img
     
-    virsh undefine vgrbox
+    if [ "$(arch)" == "x86_64" ];then
+        virsh undefine vgrbox
+    elif [ "$(arch)" == "aarch64" ];then
+        virsh undefine vgrbox
+    fi
+
     
     if [ "$(vagrant box list | grep -w $vagrant_box )" ]; then
         echo "vagrant box $vagrant_box created"; else
