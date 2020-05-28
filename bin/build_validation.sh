@@ -71,8 +71,9 @@ then
 fi
 
 if [ -d "logs" ];then
-    tar cvJf logs_$(date +%F).txz logs
-    rm -rf logs
+    archive_name="logs_$(date +%F-%H-%M).txz"
+    echo "creating archive $archive_name from existing logs"
+    tar cJf $archive_name logs --remove-files
 fi
 
 mkdir logs 2>/dev/null
