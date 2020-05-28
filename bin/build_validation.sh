@@ -289,7 +289,7 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
     if [ "$(arch)" == "x86_64" ];then
         virsh undefine vgrbox
     elif [ "$(arch)" == "aarch64" ];then
-        virsh undefine vgrbox
+        virsh undefine vgrbox --nvram
     fi
 
     
