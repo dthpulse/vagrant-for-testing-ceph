@@ -83,7 +83,7 @@ function vssh_script () {
     local script="$2"
     echo "WWWWW $script WWWWW"
     pdsh -S -w $node "find /var/log -type f -exec truncate -s 0 {} \;"
-    pdsh -S -w $node "bash /vagrant/scripts/$script"
+    pdsh -S -w $node "bash /scripts/$script"
     script_exit_value=$?
 }
 
