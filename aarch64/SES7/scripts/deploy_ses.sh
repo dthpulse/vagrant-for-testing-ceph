@@ -13,12 +13,14 @@ sleep 15
 
 ceph-salt config /ceph_cluster/minions add "*"
 ceph-salt config /ceph_cluster/roles/admin add "$master"
+ceph-salt config /ceph_cluster/roles/cephadm add "$master"
 
 ceph-salt config /ceph_cluster/roles/bootstrap set "${monitors[0]}"
 
 for i in ${monitors[@]}
 do
     ceph-salt config /ceph_cluster/roles/admin add "$i"
+    ceph-salt config /ceph_cluster/roles/cephadm add "$i"
 done
 
 ceph-salt config /ssh generate
@@ -34,15 +36,25 @@ ceph-salt export > myconfig.json
 
 ceph-salt apply --non-interactive
 
+for node in ${osd_nodes[@]%%.*}
+do
+    ceph orch host add $node
+done
+
 ceph orch apply -i /root/cluster.yaml
 
 # wait until all OSDs are deployed
 for i in ${osd_nodes[@]%%.*}
 do
-    until [ "$(ceph orch device ls | grep LVM | awk "/$i/{print \$5 | \"sort -u\"}")" == "False" ]
+    while [ ! "$(ceph osd tree --format=json | jq -r '.nodes[] | .name, .status'  \
+               | grep -v default \
+               | sed 's/null//g' \
+               | tr '\n' ' ' \
+               | awk "/$i/ && /osd./ && ! /down/{print \$0}")" ]
     do
         sleep 60
     done
+
 done
 
 ceph -s
