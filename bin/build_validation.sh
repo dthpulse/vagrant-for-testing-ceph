@@ -193,7 +193,6 @@ EOF
 function destroy_on_aarch64 () {
     nodes_list=($(vagrant status | awk '/libvirt/{print $1}'))
     virsh list --all --name | grep ${project}_ | xargs -I {} virsh destroy {}
-    virsh list --all --name | grep ${project}_ | xargs -I {} virsh undefine {} --nvram
     rm -f ${qemu_default_pool}/${project}_*
     systemctl restart libvirtd
     for node in ${nodes_list[@]}
@@ -203,6 +202,8 @@ function destroy_on_aarch64 () {
             virsh snapshot-delete ${project}_${node} $snap
         done
     done
+
+    virsh list --all --name | grep ${project}_ | xargs -I {} virsh undefine {} --nvram
 
     vagrant destroy -f
 }

@@ -5,7 +5,13 @@ osd_nodes=($osd_nodes)
 
 systemctl restart salt-master
 
-sleep 240
+if [ "$(arch)" == "x86_64" ]
+then
+    sleep 240
+elif [ "$(arch)" == "aarch64" ]
+then
+    sleep 660
+fi
 
 salt \* saltutil.sync_all
 
