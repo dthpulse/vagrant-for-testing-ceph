@@ -99,12 +99,25 @@ function create_snapshot () {
         pdsh -w ${ses_cluster// /,} "rm -rf /var/log/scc_*"
         for node in $nodes
         do
-            virsh destroy ${project}_${node} 
+            virsh destroy ${project}_${node}
+            if [ "$(arch)" == "aarch64" ];then
+                sed -i '/pflash/d; /acpi/d; /apic/d' /etc/libvirt/qemu/${project}_${node}.xml
+            fi
         done
+         
+        if [ "$(arch)" == "aarch64" ];then
+            systemctl restart libvirtd
+        fi
+
         for node in $nodes
         do
             virsh snapshot-create-as ${project}_${node} ${script%%.*}
         done
+        if [ "$(arch)" == "aarch64" ];then
+            rsync -aP /etc/libvirt/qemu_pflash/ /etc/libvirt/qemu/
+            systemctl restart libvirtd
+        fi
+
     fi
 }
 
@@ -115,6 +128,11 @@ function revert_to_ses () {
         node="${project}_${node}"
         virsh snapshot-revert $node deployment 2>&1 > /dev/null
     done
+
+    if [ "$(arch)" == "aarch64" ];then
+        rsync -aP /etc/libvirt/qemu_pflash/ /etc/libvirt/qemu/
+        systemctl restart libvirtd
+    fi
 
     for node in ${ses_cluster[@]%%.*}
     do
@@ -341,6 +359,10 @@ then
     fi
 
     vagrant up 
+
+    if [ "$(arch)" == "aarch64" ];then
+        rsync -aP /etc/libvirt/qemu/ /etc/libvirt/qemu_pflash
+    fi
     
     if [ $? -ne 0 ];then exit 1;fi
  
