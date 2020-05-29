@@ -33,7 +33,7 @@ ceph-salt config /ssh generate
 ceph-salt config /time_server/server_hostname set "$master"
 ceph-salt config /time_server/external_servers add "ntp.suse.cz"
 
-if [ ! -z "$(curl -s http://localhost:5000/v2/_catalog | jq -r .repositories[])" ];then
+if [ "$(arch)" == "x86_64" ];then
     ceph-salt config /containers/registries add prefix=registry.suse.de location=192.168.122.1:5000 insecure=true
 fi
 
