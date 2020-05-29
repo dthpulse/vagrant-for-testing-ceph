@@ -70,7 +70,7 @@ then
     exit 1
 fi
 
-if [ -d "logs" ];then
+if [ -d "logs" ] && [ "$(ls -A logs 2>/dev/null)" ];then
     archive_name="logs_$(date +%F-%H-%M).txz"
     echo "creating archive $archive_name from existing logs"
     tar cJf $archive_name logs --remove-files
