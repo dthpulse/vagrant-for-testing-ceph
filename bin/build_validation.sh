@@ -243,6 +243,15 @@ gpgkey=$ses_url/repodata/repomd.xml.key
 enabled=1
 EOF
 
+### destroy existing cluster
+if $destroy && [ "$(arch)" == "x86_64" ];then
+    vagrant destroy -f
+    exit
+elif $destroy && [ "$(arch)" == "aarch64" ];then
+    destroy_on_aarch64
+    exit
+fi
+
 ### creates vagrnat box from SLP repo if box not already exists
 new_vagrant_box="${sle_slp_dir,,}"
 new_vagrant_box="${new_vagrant_box//-/}"
@@ -323,15 +332,6 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
     rm -f /srv/www/htdocs/autoyast_{intel,aarch64}.xml
 else
     vagrant_box="$new_vagrant_box"
-fi
-
-### destroy existing cluster
-if $destroy && [ "$(arch)" == "x86_64" ];then
-    vagrant destroy -f
-    exit
-elif $destroy && [ "$(arch)" == "aarch64" ];then
-    destroy_on_aarch64
-    exit
 fi
 
 ### destroy existing cluster before deploy (useful for Jenkins)
