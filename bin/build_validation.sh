@@ -7,7 +7,7 @@ TEMP=$(getopt -o h --long "vagrant-box:,vagrantfile:,ses-only,destroy,all-script
 
 if [ $? -ne 0 ]; then echo "Terminating ..." >&2; exit 1; fi
 
-export PDSH_SSH_ARGS_APPEND="-i ~/.ssh/storage-automation -l root"
+export PDSH_SSH_ARGS_APPEND="-i ~/.ssh/storage-automation -l root -o StrictHostKeyChecking=no"
 ses_only=false
 destroy=false
 all_scripts=false
@@ -70,7 +70,7 @@ then
     exit 1
 fi
 
-if [ -d "logs" ];then
+if [ -d "logs" ] && [ "$(ls -A logs 2>/dev/null)" ];then
     archive_name="logs_$(date +%F-%H-%M).txz"
     echo "creating archive $archive_name from existing logs"
     tar cJf $archive_name logs --remove-files
@@ -83,7 +83,7 @@ function vssh_script () {
     local script="$2"
     echo "WWWWW $script WWWWW"
     pdsh -S -w $node "find /var/log -type f -exec truncate -s 0 {} \;"
-    pdsh -S -w $node "bash /vagrant/scripts/$script"
+    pdsh -S -w $node "bash /scripts/$script"
     script_exit_value=$?
 }
 
@@ -99,12 +99,25 @@ function create_snapshot () {
         pdsh -w ${ses_cluster// /,} "rm -rf /var/log/scc_*"
         for node in $nodes
         do
-            virsh destroy ${project}_${node} 
+            virsh destroy ${project}_${node}
+            if [ "$(arch)" == "aarch64" ];then
+                sed -i '/pflash/d; /acpi/d; /apic/d' /etc/libvirt/qemu/${project}_${node}.xml
+            fi
         done
+         
+        if [ "$(arch)" == "aarch64" ];then
+            systemctl restart libvirtd
+        fi
+
         for node in $nodes
         do
             virsh snapshot-create-as ${project}_${node} ${script%%.*}
         done
+        if [ "$(arch)" == "aarch64" ];then
+            rsync -aP /etc/libvirt/qemu_pflash/ /etc/libvirt/qemu/
+            systemctl restart libvirtd
+        fi
+
     fi
 }
 
@@ -115,6 +128,11 @@ function revert_to_ses () {
         node="${project}_${node}"
         virsh snapshot-revert $node deployment 2>&1 > /dev/null
     done
+
+    if [ "$(arch)" == "aarch64" ];then
+        rsync -aP /etc/libvirt/qemu_pflash/ /etc/libvirt/qemu/
+        systemctl restart libvirtd
+    fi
 
     for node in ${ses_cluster[@]%%.*}
     do
@@ -173,10 +191,20 @@ EOF
 }
 
 function destroy_on_aarch64 () {
-    virsh list --all --name | grep -w $project | xargs -I {} virsh destroy {}
-    virsh list --all --name | grep -w $project | xargs -I {} virsh undefine {} --nvram
+    nodes_list=($(vagrant status | awk '/libvirt/{print $1}'))
+    virsh list --all --name | grep ${project}_ | xargs -I {} virsh destroy {}
     rm -f ${qemu_default_pool}/${project}_*
     systemctl restart libvirtd
+    for node in ${nodes_list[@]}
+    do
+        for snap in $(virsh snapshot-list --name ${project}_${node})
+        do
+            virsh snapshot-delete ${project}_${node} $snap
+        done
+    done
+
+    virsh list --all --name | grep ${project}_ | xargs -I {} virsh undefine {} --nvram
+
     vagrant destroy -f
 }
 
@@ -184,7 +212,7 @@ ses_deploy_scripts=(deploy_ses.sh hosts_file_correction.sh configure_ses.sh)
 project=$(basename $PWD)
 scripts=$(find scripts -maxdepth 1 -type f ! -name ${ses_deploy_scripts[0]} \
      -and ! -name ${ses_deploy_scripts[1]} -and ! -name ${ses_deploy_scripts[2]} -exec basename {} \;)
-ssh_options="-i ~/.ssh/storage-automation -l root"
+ssh_options="-i ~/.ssh/storage-automation -l root -o StrictHostKeyChecking=no"
 qemu_default_pool="$(virsh pool-dumpxml default | grep path | sed 's/<.path>//; s/<path>//')"
 libvirt_default_ip="$(virsh net-dumpxml default | awk '/ip address/{print $2}' | cut -d = -f 2 | sed "s/'//g")"
 
@@ -224,6 +252,15 @@ gpgcheck=0
 gpgkey=$ses_url/repodata/repomd.xml.key
 enabled=1
 EOF
+
+### destroy existing cluster
+if $destroy && [ "$(arch)" == "x86_64" ];then
+    vagrant destroy -f
+    exit
+elif $destroy && [ "$(arch)" == "aarch64" ];then
+    destroy_on_aarch64
+    exit
+fi
 
 ### creates vagrnat box from SLP repo if box not already exists
 new_vagrant_box="${sle_slp_dir,,}"
@@ -307,15 +344,6 @@ else
     vagrant_box="$new_vagrant_box"
 fi
 
-### destroy existing cluster
-if $destroy && [ "$(arch)" == "x86_64" ];then
-    vagrant destroy -f
-    exit
-elif $destroy && [ "$(arch)" == "aarch64" ];then
-    destroy_on_aarch64
-    exit
-fi
-
 ### destroy existing cluster before deploy (useful for Jenkins)
 if $destroy_b4_deploy && [ "$(arch)" == "x86_64" ];then
     vagrant destroy -f
@@ -341,6 +369,10 @@ then
     fi
 
     vagrant up 
+
+    if [ "$(arch)" == "aarch64" ];then
+        rsync -aP /etc/libvirt/qemu/ /etc/libvirt/qemu_pflash
+    fi
     
     if [ $? -ne 0 ];then exit 1;fi
  
