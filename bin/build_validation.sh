@@ -1,5 +1,6 @@
 #!/usr/bin/env bash 
 
+
 source /root/.bashrc
 
 TEMP=$(getopt -o h --long "vagrant-box:,vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,destroy-before-deploy,sle-slp-dir:,ses-slp-dir:" -n 'build_validation.sh' -- "$@")
@@ -363,11 +364,7 @@ then
 
     if [ -z "$vagrant_box" ]
     then
-<<<<<<< HEAD
-        echo "Missing --vagrant-box parameter"
-=======
         echo "Missing --vagrant-box-name parameter"
->>>>>>> dpdev
     else
         sed -i "s/ses_cl_box: .*/ses_cl_box: $vagrant_box/" ${VAGRANT_VAGRANTFILE}.yaml
     fi
