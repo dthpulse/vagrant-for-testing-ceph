@@ -26,7 +26,11 @@ done
 ceph-salt config /ssh generate
 ceph-salt config /time_server/server_hostname set "$master"
 ceph-salt config /time_server/external_servers add "ntp.suse.cz"
-ceph-salt config /containers/registries add prefix=registry.suse.de location=192.168.122.1:5000 insecure=true
+
+if [ ! -z "$(curl -s http://localhost:5000/v2/_catalog | jq -r .repositories[])" ];then
+    ceph-salt config /containers/registries add prefix=registry.suse.de location=192.168.122.1:5000 insecure=true
+fi
+
 ceph-salt config /containers/images/ceph set "registry.suse.de/suse/sle-15-sp2/update/products/ses7/milestones/containers/ses/7/ceph/ceph"
 ceph-salt config ls
 

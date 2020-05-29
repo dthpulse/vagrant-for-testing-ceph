@@ -7,7 +7,7 @@ TEMP=$(getopt -o h --long "vagrant-box:,vagrantfile:,ses-only,destroy,all-script
 
 if [ $? -ne 0 ]; then echo "Terminating ..." >&2; exit 1; fi
 
-export PDSH_SSH_ARGS_APPEND="-i ~/.ssh/storage-automation -l root"
+export PDSH_SSH_ARGS_APPEND="-i ~/.ssh/storage-automation -l root -o StrictHostKeyChecking=no"
 ses_only=false
 destroy=false
 all_scripts=false
@@ -191,10 +191,19 @@ EOF
 }
 
 function destroy_on_aarch64 () {
+    nodes_list=($(vagrant status | awk '/libvirt/{print $1}'))
     virsh list --all --name | grep ${project}_ | xargs -I {} virsh destroy {}
     virsh list --all --name | grep ${project}_ | xargs -I {} virsh undefine {} --nvram
     rm -f ${qemu_default_pool}/${project}_*
     systemctl restart libvirtd
+    for node in ${nodes_list[@]}
+    do
+        for snap in $(virsh snapshot-list --name ${project}_${node})
+        do
+            virsh snapshot-delete ${project}_${node} $snap
+        done
+    done
+
     vagrant destroy -f
 }
 
