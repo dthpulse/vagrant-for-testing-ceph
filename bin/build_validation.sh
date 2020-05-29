@@ -212,7 +212,7 @@ ses_deploy_scripts=(deploy_ses.sh hosts_file_correction.sh configure_ses.sh)
 project=$(basename $PWD)
 scripts=$(find scripts -maxdepth 1 -type f ! -name ${ses_deploy_scripts[0]} \
      -and ! -name ${ses_deploy_scripts[1]} -and ! -name ${ses_deploy_scripts[2]} -exec basename {} \;)
-ssh_options="-i ~/.ssh/storage-automation -l root"
+ssh_options="-i ~/.ssh/storage-automation -l root -o StrictHostKeyChecking=no"
 qemu_default_pool="$(virsh pool-dumpxml default | grep path | sed 's/<.path>//; s/<path>//')"
 libvirt_default_ip="$(virsh net-dumpxml default | awk '/ip address/{print $2}' | cut -d = -f 2 | sed "s/'//g")"
 
