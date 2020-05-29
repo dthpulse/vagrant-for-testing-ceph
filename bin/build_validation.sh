@@ -191,8 +191,8 @@ EOF
 }
 
 function destroy_on_aarch64 () {
-    virsh list --all --name | grep -w $project | xargs -I {} virsh destroy {}
-    virsh list --all --name | grep -w $project | xargs -I {} virsh undefine {} --nvram
+    virsh list --all --name | grep ${project}_ | xargs -I {} virsh destroy {}
+    virsh list --all --name | grep ${project}_ | xargs -I {} virsh undefine {} --nvram
     rm -f ${qemu_default_pool}/${project}_*
     systemctl restart libvirtd
     vagrant destroy -f
