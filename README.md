@@ -453,6 +453,8 @@ enabled=1
 
 #### Creating Vagrant Box
 
+**Creating of the Vagrant box is automated with the _build_validation.sh_ script.**
+
 In this example we are going to use SLE-15-SP2-Snapshot15 and SES7-M10.
 
 ##### Download and mount ISOs

@@ -2,7 +2,7 @@
 
 source /root/.bashrc
 
-TEMP=$(getopt -o h --long "vagrant-box:,vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,destroy-before-deploy,sle-slp-dir:,ses-slp-dir:" -n 'build_validation.sh' -- "$@")
+TEMP=$(getopt -o h --long "vagrant-box:,vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,destroy-before-deploy,sle-slp-dir:,ses-slp-dir:,ses-ibs-dir:" -n 'build_validation.sh' -- "$@")
 
 
 if [ $? -ne 0 ]; then echo "Terminating ..." >&2; exit 1; fi
@@ -33,6 +33,7 @@ function helpme () {
     --vagrant-box            existing vagrant box name. Don't use with option --sle-slp-dir. 
     --sle-slp-dir            directory of SLE Full SLP (example: SLE-15-SP2-Full-Snapshot16)
     --ses-slp-dir            directory of SES SLP (example: SUSE-Enterprise-Storage-7-Milestone11)
+    --ses-ibs-dir            directory of SES ibs (example: SUSE-Enterprise-Storage-7-POOL-x86_64-Media1)
     --destroy-before-deploy  destroys existing cluster before deployment (useful for Jenkins)
 
 EOF
@@ -57,6 +58,9 @@ do
                        shift 2;;
         --ses-slp-dir) ses_slp_dir=$2
                        ses_url="http://download.suse.de/install/SLP/$ses_slp_dir/$(arch)/DVD1"
+                       shift 2;;
+        --ses-ibs-dir) ses_slp_dir=$2
+                       ses_url="http://download.suse.de/ibs/Devel:/Storage:/7.0/images/repo/$ses_slp_dir"
                        shift 2;;
         --help|-h) helpme; exit;;
         --) shift; break;;
