@@ -145,7 +145,9 @@ function revert_to_ses () {
     done
 
     sleep 30
- 
+}
+
+function wait_for_health_ok () {
     while [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health" 2>/dev/null)" != "HEALTH_OK" ]
     do
         if [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health detail  --format=json \
@@ -393,16 +395,8 @@ then
         virsh start ${project}_${node}
     done
     
-    while [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health" 2>/dev/null)" != "HEALTH_OK" ]	 
-    do
-            if [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health detail  --format=json \
-                          | jq -r .checks.MGR_MODULE_ERROR.summary.message" 2>/dev/null)" \
-                          == "Module 'dashboard' has failed: Timeout('Port 8443 not free on ::.',)" ]
-            then
-                ssh $ssh_options ${monitors[0]%%.*} "systemctl restart ceph.target" 2>/dev/null
-            fi
-        sleep 10
-    done
+    wait_for_health_ok
+
 else
     set_variables
 fi
@@ -429,6 +423,7 @@ then
         vssh_script "${monitors[0]%%.*}" "$script"
         create_snapshot "$(echo ${ses_cluster[@]%%.*})" "$script"
         revert_to_ses
+        wait_for_health_ok
     done
 elif $only_script
 then
@@ -437,6 +432,7 @@ then
         vssh_script "${monitors[0]%%.*}" "$script"
         create_snapshot "$(echo ${ses_cluster[@]%%.*})" "$script"
         revert_to_ses
+        wait_for_health_ok
     done
 fi
 
