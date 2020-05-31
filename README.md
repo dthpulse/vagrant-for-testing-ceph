@@ -49,7 +49,13 @@ We have already everything ready and using server jupiter.qa.suse.cz for x86_64 
 
 To login to the servers as root user use storage-automation key.
 
-For Build Validation it's enough to follow steps described in:
+For Build Validation it's enough to trigger the test on Jenkins 
+
+- [Jenkins Build Validation x86_64](https://storage-ci.suse.de/view/BV/job/storage-milestone-build-validation-x86_64/)
+
+- [Jenkins Build Validation aarch64](https://storage-ci.suse.de/view/BV/job/storage-milestone-build-validation-aarch64/)
+
+or to follow the steps described in:
 
 - [Preparing for Build Validation tests](#preparing-for-build-validation-tests)
 
