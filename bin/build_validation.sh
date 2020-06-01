@@ -8,7 +8,7 @@ TEMP=$(getopt -o h --long "vagrant-box:,vagrantfile:,ses-only,destroy,all-script
 
 if [ $? -ne 0 ]; then echo "Terminating ..." >&2; exit 1; fi
 
-export PDSH_SSH_ARGS_APPEND="-i ~/.ssh/storage-automation -l root -o StrictHostKeyChecking=no"
+export PDSH_SSH_ARGS_APPEND="-i ~/.ssh/storage-automation -l root -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 ses_only=false
 destroy=false
 all_scripts=false
@@ -219,7 +219,7 @@ ses_deploy_scripts=(deploy_ses.sh hosts_file_correction.sh configure_ses.sh)
 project=$(basename $PWD)
 scripts=$(find scripts/ -maxdepth 1 -type f ! -name ${ses_deploy_scripts[0]} \
      -and ! -name ${ses_deploy_scripts[1]} -and ! -name ${ses_deploy_scripts[2]} -exec basename {} \;)
-ssh_options="-i ~/.ssh/storage-automation -l root -o StrictHostKeyChecking=no"
+ssh_options="-i ~/.ssh/storage-automation -l root -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 qemu_default_pool="$(virsh pool-dumpxml default | grep path | sed 's/<.path>//; s/<path>//')"
 libvirt_default_ip="$(virsh net-dumpxml default | awk '/ip address/{print $2}' | cut -d = -f 2 | sed "s/'//g")"
 
