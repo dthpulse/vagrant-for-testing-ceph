@@ -41,7 +41,7 @@ mount -t ceph $mount_monitors:/ /mnt/cephfs -o name=admin,secret=$(echo $secret 
 
 mount | grep "/mnt/cephfs" || exit 1
 
-dd if=/dev/zero of=/mnt/cephfs/testfile.bin oflag=direct bs=2M count=1000 status=progress
+dd if=/dev/zero of=/mnt/cephfs/testfile.bin oflag=direct bs=1M count=100 status=progress
 
 rm -f /mnt/cephfs/testfile.bin
 
