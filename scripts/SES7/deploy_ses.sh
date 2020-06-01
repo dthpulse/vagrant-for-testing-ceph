@@ -18,15 +18,14 @@ salt \* saltutil.sync_all
 sleep 15
 
 ceph-salt config /ceph_cluster/minions add "*"
+ceph-salt config /ceph_cluster/roles/cephadm add "*"
 ceph-salt config /ceph_cluster/roles/admin add "$master"
-ceph-salt config /ceph_cluster/roles/cephadm add "$master"
 
 ceph-salt config /ceph_cluster/roles/bootstrap set "${monitors[0]}"
 
 for i in ${monitors[@]}
 do
     ceph-salt config /ceph_cluster/roles/admin add "$i"
-    ceph-salt config /ceph_cluster/roles/cephadm add "$i"
 done
 
 ceph-salt config /ssh generate
