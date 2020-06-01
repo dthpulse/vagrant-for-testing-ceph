@@ -53,7 +53,7 @@ parted -s $rbd_dev  unit % mklabel gpt mkpart 1 xfs 0 100
 lsblk
 mkfs.xfs ${rbd_dev}p1
 mount ${rbd_dev}p1 /mnt
-dd if=/dev/zero of=/mnt/file.bin count=1000 bs=1M status=progress oflag=direct
+dd if=/dev/zero of=/mnt/file.bin count=100 bs=1M status=progress oflag=direct
 
 ### Removing tiering ###
 umount /mnt

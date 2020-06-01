@@ -43,7 +43,7 @@ do
 
 	mount ${rbd_dev}p1 /mnt/pool_$mode
 
-	dd if=/dev/zero of=/mnt/pool_$mode/file.bin bs=2M count=2048 status=progress oflag=direct
+	dd if=/dev/zero of=/mnt/pool_$mode/file.bin bs=1M count=100 status=progress oflag=direct
 
 	rbd du -p pool_${mode} image1
 
