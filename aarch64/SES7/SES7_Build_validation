@@ -5,7 +5,7 @@ require 'yaml'
 require 'net/ssh'
 require 'fileutils'
 
-$project_name = 'SES7_Build_validation_aarch64'
+$project_name = 'SES7_Build_validation'
 $project_dir = "#{$project_name}" + '-files'
 FileUtils.mkdir_p $project_name + '-files'
 
