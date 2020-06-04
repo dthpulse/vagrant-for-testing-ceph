@@ -48,7 +48,12 @@ sleep 30
 
 (ceph -s | grep ".* osds down" && echo "Failed device recognized by Ceph") || (echo "NOT recognized by Ceph" && exit 1)
 
-failed_osd=$(ceph health detail --format json | jq -r .checks.OSD_DOWN.detail[].message | awk '{print $1}')
+failed_osd="$(ceph health detail --format json | jq -r .checks.OSD_DOWN.detail[].message | awk '{print $1}')"
+
+while [ "$(echo $failed_osd | wc -l)" -gt "1" ];do
+    sleep 30
+    failed_osd="$(ceph health detail --format json | jq -r .checks.OSD_DOWN.detail[].message | awk '{print $1}')"
+done
 
 health_ok
 
