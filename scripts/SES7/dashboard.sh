@@ -1,7 +1,7 @@
 set -ex
 
-ssh $master "ceph-salt config /Deployment/Dashboard/username set admin"
-ssh $master "ceph-salt config /Deployment/Dashboard/password set admin"
+ssh $master "ceph-salt config /cephadm_bootstrap/dashboard/username set admin"
+ssh $master "ceph-salt config /cephadm_bootstrap/dashboard/password set admin"
 
 ceph config set mgr mgr/dashboard/ssl false
 
@@ -16,5 +16,3 @@ if [ $(echo $?) -ne 0 ]
 then
 	        exit 1
 fi
-
-

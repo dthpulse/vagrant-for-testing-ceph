@@ -25,7 +25,7 @@ function test_rgw {
     sleep 5
     ssh $monitor_rgw "systemctl start $service_name"
     sleep 10
-    ssh $monitor_rgw "systmctl is-active $service_name"
+    ssh $monitor_rgw "systemctl is-active $service_name"
     radosgw-admin zone list --format json | jq -r .zones[] | grep $zone_name
     radosgw-admin realm list --format json | jq -r .realms[] | grep $realm_name
     ceph config dump

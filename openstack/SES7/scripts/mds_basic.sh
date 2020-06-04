@@ -23,7 +23,7 @@ function test_mds {
     sleep 5
     ssh $monitor_mds "systemctl start $service_name"
     sleep 10
-    ssh $monitor_mds "systmctl is-active $service_name"
+    ssh $monitor_mds "systemctl is-active $service_name"
     ceph fs ls 
     ceph config dump
     if [ "$action" == "update" ]
