@@ -155,7 +155,7 @@ function wait_for_health_ok () {
                       | jq -r .checks.MGR_MODULE_ERROR.summary.message" 2>/dev/null)" \
                       == "Module 'dashboard' has failed: Timeout('Port 8443 not free on ::.',)" ]
         then
-            ssh $ssh_options ${monitors[0]%%.*} "systemctl restart ceph.target" 2>/dev/null
+            ceph orch daemon rm $(ceph orch ps --daemon_type mgr | awk "/error/ && /${monitors[0]%%.*}/{print \$1}")
         fi
         sleep 30
     done
@@ -405,10 +405,10 @@ fi
 
 ### exit if SES only is required 
 ### or if only Salt cluster is required
-if $ses_only && $all_scripts \
-|| $ses_only && $only_script \
-|| $ses_only && $only_salt_cluster; then 
-exit
+if $ses_only || $only_salt_cluster; then 
+    exit
+elif ! $all_scripts || ! $only_script;then
+    exit
 fi
 
 ### runs BV scripts
