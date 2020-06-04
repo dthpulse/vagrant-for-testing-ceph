@@ -405,8 +405,8 @@ fi
 
 ### exit if SES only is required 
 ### or if only Salt cluster is required
-if $ses_only && ! $all_scripts \
-|| $ses_only && ! $only_script \
+if $ses_only && $all_scripts \
+|| $ses_only && $only_script \
 || $ses_only && $only_salt_cluster; then 
 exit
 fi
