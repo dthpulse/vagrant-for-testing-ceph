@@ -437,5 +437,11 @@ then
     done
 fi
 
-echo "List of failed scripts:"
-virsh snapshot-list --name ${project}_master | grep -v deployment
+failed_scripts="$(virsh snapshot-list --name ${project}_master | grep -v deployment)"
+if [ -z "$failed_scripts" ];then
+    exit 0
+else
+    echo "List of failed scripts:"
+    echo "$failed_scripts"
+    exit 1
+fi
