@@ -3,7 +3,7 @@
 
 source /root/.bashrc
 
-TEMP=$(getopt -o h --long "vagrant-box:,vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,destroy-before-deploy,sle-slp-dir:,ses-slp-dir:,ses-ibs-dir:" -n 'build_validation.sh' -- "$@")
+TEMP=$(getopt -o h --long "no-clients,vagrant-box:,vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,destroy-before-deploy,sle-slp-dir:,ses-slp-dir:,ses-ibs-dir:" -n 'build_validation.sh' -- "$@")
 
 
 if [ $? -ne 0 ]; then echo "Terminating ..." >&2; exit 1; fi
@@ -16,6 +16,7 @@ only_script=false
 existing=false
 only_salt_cluster=false
 destroy_b4_deploy=false
+no_clients=false
 
 function helpme () {
   cat << EOF
@@ -36,6 +37,7 @@ function helpme () {
     --ses-slp-dir            directory of SES SLP (example: SUSE-Enterprise-Storage-7-Milestone11)
     --ses-ibs-dir            directory of SES ibs (example: SUSE-Enterprise-Storage-7-POOL-x86_64-Media1)
     --destroy-before-deploy  destroys existing cluster before deployment (useful for Jenkins)
+    --no-clients             scripts for testing of the clients will not be executed
 
 EOF
 }
@@ -63,6 +65,7 @@ do
         --ses-ibs-dir) ses_slp_dir=$2
                        ses_url="http://download.suse.de/ibs/Devel:/Storage:/7.0/images/repo/$ses_slp_dir"
                        shift 2;;
+        --no-clients) no_clients=true; shift;;
         --help|-h) helpme; exit;;
         --) shift; break;;
         *) break;;
@@ -217,8 +220,15 @@ function destroy_on_aarch64 () {
 
 ses_deploy_scripts=(deploy_ses.sh hosts_file_correction.sh configure_ses.sh)
 project=$(basename $PWD)
-scripts=$(find scripts/ -maxdepth 1 -type f ! -name ${ses_deploy_scripts[0]} \
-     -and ! -name ${ses_deploy_scripts[1]} -and ! -name ${ses_deploy_scripts[2]} -exec basename {} \;)
+if $no_clients; then
+    scripts=$(find scripts/ -maxdepth 1 -type f ! -name ${ses_deploy_scripts[0]} \
+         -and ! -name ${ses_deploy_scripts[1]} -and ! -name ${ses_deploy_scripts[2]} \
+         -and ! -name clients_\* -exec basename {} \;)
+else
+    scripts=$(find scripts/ -maxdepth 1 -type f ! -name ${ses_deploy_scripts[0]} \
+         -and ! -name ${ses_deploy_scripts[1]} -and ! -name ${ses_deploy_scripts[2]} \
+         -exec basename {} \;)
+fi
 ssh_options="-i ~/.ssh/storage-automation -l root -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 qemu_default_pool="$(virsh pool-dumpxml default | grep path | sed 's/<.path>//; s/<path>//')"
 libvirt_default_ip="$(virsh net-dumpxml default | awk '/ip address/{print $2}' | cut -d = -f 2 | sed "s/'//g")"
