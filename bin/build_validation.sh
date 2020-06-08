@@ -200,7 +200,7 @@ end
 EOF
 }
 
-function destroy_on_aarch64 () {
+function destroy_existing_cluster () {
     nodes_list=($(vagrant status | awk '/libvirt/{print $1}'))
     virsh list --all --name | grep ${project}_ | xargs -I {} virsh destroy {}
     rm -f ${qemu_default_pool}/${project}_*
@@ -213,7 +213,11 @@ function destroy_on_aarch64 () {
         done
     done
 
-    virsh list --all --name | grep ${project}_ | xargs -I {} virsh undefine {} --nvram
+    if [ "$(arch)" == "aarch64" ];then
+        virsh list --all --name | grep ${project}_ | xargs -I {} virsh undefine {} --nvram
+    else
+        virsh list --all --name | grep ${project}_ | xargs -I {} virsh undefine {}
+    fi
 
     vagrant destroy -f
 }
@@ -271,12 +275,8 @@ enabled=1
 EOF
 
 ### destroy existing cluster
-if $destroy && [ "$(arch)" == "x86_64" ];then
-    vagrant destroy -f
-    exit
-elif $destroy && [ "$(arch)" == "aarch64" ];then
-    destroy_on_aarch64
-    exit
+if $destroy ;then
+    destroy_existing_cluster
 fi
 
 ### creates vagrnat box from SLP repo if box not already exists
@@ -362,10 +362,8 @@ else
 fi
 
 ### destroy existing cluster before deploy (useful for Jenkins)
-if $destroy_b4_deploy && [ "$(arch)" == "x86_64" ];then
-    vagrant destroy -f
-elif $destroy_b4_deploy && [ "$(arch)" == "aarch64" ];then
-    destroy_on_aarch64
+if $destroy_b4_deploy ;then
+    destroy_existing_cluster
 fi
 
 ### creates nodes and deploys SES 
@@ -415,7 +413,7 @@ fi
 
 ### exit if SES only is required 
 ### or if only Salt cluster is required
-if $ses_only && $only_salt_cluster && ! $all_scripts && ! $only_script;then
+if $ses_only &&  $only_salt_cluster || ! $all_scripts && ! $only_script;then
     exit
 fi
 
