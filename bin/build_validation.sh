@@ -633,7 +633,7 @@ fi
 
 ### exit if SES only is required 
 ### or if only Salt cluster is required
-if $ses_only && $only_salt_cluster && ! $all_scripts && ! $only_script;then
+if $ses_only &&  $only_salt_cluster || ! $all_scripts && ! $only_script;then
     exit
 fi
 
