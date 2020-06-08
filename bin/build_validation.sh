@@ -290,7 +290,6 @@ EOF
 
 ### destroy existing cluster
 if $destroy && [ "$(arch)" == "x86_64" ];then
-    #vagrant destroy -f
     destroy_on_intel
     exit
 elif $destroy && [ "$(arch)" == "aarch64" ];then
@@ -382,7 +381,6 @@ fi
 
 ### destroy existing cluster before deploy (useful for Jenkins)
 if $destroy_b4_deploy && [ "$(arch)" == "x86_64" ];then
-    #vagrant destroy -f
     destroy_on_intel
 elif $destroy_b4_deploy && [ "$(arch)" == "aarch64" ];then
     destroy_on_aarch64
