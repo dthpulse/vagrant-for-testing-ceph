@@ -363,7 +363,7 @@ fi
 
 ### destroy existing cluster before deploy (useful for Jenkins)
 if $destroy_b4_deploy && [ "$(arch)" == "x86_64" ];then
-    VAGRANT_VAGRANTFILE=$VAGRANT_VAGRANTFILE vagrant destroy -f
+    vagrant destroy -f
 elif $destroy_b4_deploy && [ "$(arch)" == "aarch64" ];then
     destroy_on_aarch64
 fi
