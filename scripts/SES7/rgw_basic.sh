@@ -40,12 +40,12 @@ function test_rgw {
 # creates rgw
 test_rgw apply default default
 
-# change realm
-test_rgw update default realm1
-
-# change zone
-test_rgw update zone1 realm1
+## change realm
+#test_rgw update default realm1
+#
+## change zone
+#test_rgw update zone1 realm1
 
 # find if realm and zone are listed 
-test radosgw-admin realm list --format=json | jq -r .realms[]
-test radosgw-admin zone list --format=json | jq -r .zones[]
+#test radosgw-admin realm list --format=json | jq -r .realms[]
+test $(radosgw-admin zone list --format=json | jq -r .zones[])
