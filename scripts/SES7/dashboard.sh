@@ -12,6 +12,8 @@ ceph config set mgr mgr/dashboard/ssl false
 ceph mgr module disable dashboard
 ceph mgr module enable dashboard
 
+sleep 15
+
 dashboard_url
 
 while [ "$dashboard_url" == "null" ];do
