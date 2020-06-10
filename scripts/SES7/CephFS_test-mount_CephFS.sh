@@ -7,7 +7,7 @@ random_minion_fqdn=${monitors[0]}
 
 ceph fs volume create myfs ${random_minion_fqdn%%.*}
 
-while [ "$(ceph fs ls --format json | jq -r .[].name)" != "myfs" ]
+while [ "$(ceph fs ls --format json | jq -r '.[].name')" != "myfs" ]
 do
     sleep 5
 done
@@ -17,7 +17,7 @@ mount_monitors="$(echo "${monitors[@]}" | tr ' ' ',')"
 
 mkdir /mnt/cephfs
 
-while [ "$(ceph orch ps --daemon_type mds --format json | jq -r .[].status_desc)" != "running" ];do
+while [ "$(ceph orch ps --daemon_type mds --format json | jq -r '.[].status_desc')" != "running" ];do
     sleep 10
 done
 
