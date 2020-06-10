@@ -12,7 +12,8 @@ function test_rgw {
     local action=$1
     local realm_name=$2
     local zone_name=$3
-    local service_name="ceph-${ceph_fsid}@rgw.${realm_name}.${zone_name}*"
+    local daemon_name=$(ceph orch ps --daemon_type rgw --format json | jq -r .[].daemon_id)
+    local service_name="ceph-${ceph_fsid}@rgw.${daemon_name}"
     ceph orch $action rgw --realm_name=$realm_name --zone_name=$zone_name 1 ${monitor_rgw%%.*}:$monitor_rgw_ip
     while [ -z "$(ceph orch ps | awk '/rgw/&&/running/{print $0}')" ];do
         sleep 30
@@ -27,14 +28,7 @@ function test_rgw {
     sleep 10
     ssh $monitor_rgw "systemctl is-active $service_name"
     radosgw-admin zone list --format json | jq -r .zones[] | grep $zone_name
-    radosgw-admin realm list --format json | jq -r .realms[] | grep $realm_name
-    ceph config dump
-    if [ "$action" == "update" ]
-    then
-        ceph orch rgw rm $realm_name $zone_name
-	ceph config dump
-	ssh $monitor_rgw "systemctl status $service_name"
-    fi
+    #radosgw-admin realm list --format json | jq -r .realms[] | grep $realm_name
 }
 
 # creates rgw
@@ -45,7 +39,3 @@ test_rgw apply default default
 #
 ## change zone
 #test_rgw update zone1 realm1
-
-# find if realm and zone are listed 
-#test radosgw-admin realm list --format=json | jq -r .realms[]
-test $(radosgw-admin zone list --format=json | jq -r .zones[])
