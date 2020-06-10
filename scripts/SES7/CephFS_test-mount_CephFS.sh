@@ -17,6 +17,10 @@ mount_monitors="$(echo "${monitors[@]}" | tr ' ' ',')"
 
 mkdir /mnt/cephfs
 
+while [ "$(ceph orch ps --daemon_type mds --format json | jq -r .[].status_desc)" != "running" ];do
+    sleep 10
+done
+
 mount -t ceph $mount_monitors:/ /mnt/cephfs -o name=admin,secret=$(echo $secret | tr -d ' ')
 
 mount | grep "/mnt/cephfs"
@@ -25,5 +29,3 @@ dd if=/dev/zero of=/mnt/cephfs/testfile.bin oflag=direct bs=1M count=100 status=
 
 rm -f /mnt/cephfs/testfile.bin
 
-umount /mnt/cephfs
-rm -rf /mnt/cephfs
