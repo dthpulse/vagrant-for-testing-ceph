@@ -58,7 +58,7 @@ dd if=/dev/zero of=/mnt/file.bin count=100 bs=1M status=progress oflag=direct
 ### Removing tiering ###
 umount /mnt
 rbdmap unmap-all | true
-ceph osd tier cache-mode hot-storage proxy
+ceph osd tier cache-mode hot-storage none --yes-i-really-mean-it
 rados -p hot-storage ls
 
 rados -p hot-storage cache-flush-evict-all | true
