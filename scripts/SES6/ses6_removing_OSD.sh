@@ -71,7 +71,7 @@ position=$((size/4096 - 33))
 salt $random_minion_fqdn cmd.run "dd if=/dev/zero of=/dev/$minion_osd_disk bs=4096 count=33 seek=$position oflag=direct"
 
 echo "rebooting $random_minion_fqdn"
-salt $random_minion_fqdn system.reboot || true
+salt $random_minion_fqdn system.reboot | true
 
 echo "waiting for $random_minion_fqdn"
 sleep 10

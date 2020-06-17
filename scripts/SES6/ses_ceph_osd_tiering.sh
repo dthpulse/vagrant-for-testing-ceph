@@ -39,7 +39,7 @@ ceph osd tier set-overlay cold-storage hot-storage
 
 ceph osd pool set hot-storage hit_set_type bloom
 
-ceph osd tier cache-mode hot-storage forward || true
+ceph osd tier cache-mode hot-storage forward | true
 ceph osd tier cache-mode hot-storage forward --yes-i-really-mean-it
 
 echo "### Getting cluster health status ###"

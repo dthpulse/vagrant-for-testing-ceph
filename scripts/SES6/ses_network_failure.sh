@@ -98,10 +98,10 @@ function remove_netem_rules () {
     do
         if [ ! -z $cluster_interface ] && [ "$cluster_interface" != "$public_interface" ]
         then
-               salt $rm_qdisc_minion cmd.run "tc qdisc del dev $cluster_interface root netem || true"
+               salt $rm_qdisc_minion cmd.run "tc qdisc del dev $cluster_interface root netem | true"
         fi
         
-        salt $rm_qdisc_minion cmd.run "tc qdisc del dev $public_interface root netem || true"
+        salt $rm_qdisc_minion cmd.run "tc qdisc del dev $public_interface root netem | true"
     done
 }
 

@@ -65,7 +65,7 @@ ssh $random_minion_fqdn "sgdisk -Z $osd_systemdisk" 2>/dev/null
 
 ssh $random_minion_fqdn "sgdisk -o -g $osd_systemdisk" 2>/dev/null
 
-ssh $random_minion_fqdn reboot || true
+ssh $random_minion_fqdn reboot | true
 
 wait_for_server $random_minion_fqdn
 

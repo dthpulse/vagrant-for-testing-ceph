@@ -36,12 +36,12 @@ done
 # testing part
 
 echo "### Creating erasure code profile ###"
-ceph osd erasure-code-profile set EC-temp-pool || true
+ceph osd erasure-code-profile set EC-temp-pool | true
 ceph osd erasure-code-profile get EC-temp-pool
 
 echo "### Customizing default EC profile settings ###"
-ceph osd erasure-code-profile set EC-temp-pool crush-failure-domain=osd k=$k m=$m || true
-ceph osd erasure-code-profile set EC-temp-pool crush-failure-domain=osd k=$k m=$m --force || true
+ceph osd erasure-code-profile set EC-temp-pool crush-failure-domain=osd k=$k m=$m | true
+ceph osd erasure-code-profile set EC-temp-pool crush-failure-domain=osd k=$k m=$m --force | true
 
 echo "### Getting EC settings ###"
 ceph osd erasure-code-profile get EC-temp-pool

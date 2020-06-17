@@ -112,7 +112,7 @@ fi
 
 login_token="$(curl -X POST -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}' \
 	${dashboard_addr}api/auth -s | jq -r .token)"
-radosgw-admin user create --uid=admin --display-name=admin || true
+radosgw-admin user create --uid=admin --display-name=admin | true
 rgw_user_id="$(radosgw-admin user info --uid=admin --format=json | jq -r .keys[0].user)"
 rgw_access_key="$(radosgw-admin user info --uid=admin --format=json | jq -r .keys[0].access_key)"
 rgw_secret_key="$(radosgw-admin user info --uid=admin --format=json | jq -r .keys[0].secret_key)"

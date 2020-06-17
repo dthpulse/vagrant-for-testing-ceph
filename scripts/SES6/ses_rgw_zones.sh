@@ -44,7 +44,7 @@ SYSTEM_ACCESS_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n
 SYSTEM_SECRET_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 40 | head -n 1)
 
 radosgw-admin realm create --rgw-realm=gold --default
-radosgw-admin zonegroup delete --rgw-zonegroup=default || true
+radosgw-admin zonegroup delete --rgw-zonegroup=default | true
 radosgw-admin zonegroup create --rgw-zonegroup=us --endpoints=http://rgw1:80 --master --default
 radosgw-admin zone create --rgw-zonegroup=us --rgw-zone=us-east-1 --endpoints=http://${random_minion_fqdn}:80 --access-key=$SYSTEM_ACCESS_KEY --secret=$SYSTEM_SECRET_KEY --default --master
 radosgw-admin user create --uid=admin --display-name="Zone User" --access-key=$SYSTEM_ACCESS_KEY --secret=$SYSTEM_SECRET_KEY --system
