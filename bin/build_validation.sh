@@ -160,6 +160,7 @@ function wait_for_health_ok () {
         then
             ssh $ssh_options ${monitors[0]%%.*} -tt << EOF
 ceph orch daemon rm \$(ceph orch ps --daemon_type mgr | awk "/error/ && /${monitors[0]%%.*}/{print \\\$1}")
+exit
 EOF
         fi
         sleep 30
