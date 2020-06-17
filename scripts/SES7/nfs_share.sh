@@ -45,7 +45,7 @@ cat << EOF > conf-nfs.1
 %url "rados://cephfs.a.data/nfs-ns/export-1"
 EOF
 
-rados --pool cephfs.a.data --namespace nfs-ns put conf-nfs.foo conf-nfs.foo
+rados --pool cephfs.a.data --namespace nfs-ns put conf-nfs.1 conf-nfs.1
 
 nfs_server=$(ceph orch restart nfs.1 | awk '{print $NF}')
 
