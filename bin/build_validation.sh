@@ -158,8 +158,8 @@ function wait_for_health_ok () {
                       | jq -r .checks.MGR_MODULE_ERROR.summary.message" 2>/dev/null)" \
                       == "Module 'dashboard' has failed: Timeout('Port 8443 not free on ::.',)" ]
         then
-            cat << EOF | ssh $ssh_options ${monitors[0]%%.*}
-ceph orch daemon rm \$(ceph orch ps --daemon_type mgr | awk "/error/ && /${monitors[0]%%.*}/{print \$1}")
+            ssh $ssh_options ${monitors[0]%%.*} -tt << EOF
+ceph orch daemon rm \$(ceph orch ps --daemon_type mgr | awk "/error/ && /${monitors[0]%%.*}/{print \\\$1}")
 EOF
         fi
         sleep 30
