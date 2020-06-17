@@ -101,6 +101,9 @@ function create_snapshot () {
     local ses_cluster="$(echo ${ses_cluster[@]})"
     if [ $script_exit_value -ne 0 ] || [ "$script" == "deployment" ]
     then
+        echo
+        echo "Collecting supportconfig files"
+        echo
         pdsh -S -w ${ses_cluster// /,} "supportconfig" 2>&1 >/dev/null
         mkdir -p logs/${script%%.*} 2>/dev/null
         rpdcp -w ${ses_cluster// /,} /var/log/scc_* logs/${script%%.*}/
