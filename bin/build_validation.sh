@@ -162,7 +162,7 @@ function wait_for_health_ok () {
                       == "Module 'dashboard' has failed: Timeout('Port 8443 not free on ::.',)" ]
         then
             ssh $ssh_options ${monitors[0]%%.*} -tt << EOF
-ceph orch daemon rm \$(ceph orch ps --daemon_type mgr | awk "/error/ && /${monitors[0]%%.*}/{print \\\$1}")
+ceph orch daemon rm \$(ceph orch ps --daemon_type mgr | awk "/${monitors[0]%%.*}/{print \\\$1}")
 exit
 EOF
         fi
