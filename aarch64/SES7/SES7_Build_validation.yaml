@@ -158,7 +158,7 @@ monitor:
         domain: sestest
         ip: 192.168.122.150 # Starting from ... . Vagrant will increase by 1 for each osd_node.
         number: 3 # number of Monitor nodes
-        memory: 4096 # MB
+        memory: 8192 # MB
         cpus: 4
         packages: # To use it both SLE and SES has to be registered. Otherwise keep it empty.
                 - salt-minion
