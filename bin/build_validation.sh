@@ -285,7 +285,7 @@ if $destroy ;then
     destroy_existing_cluster
 fi
 
-### creates vagrnat box from SLP repo if box not already exists
+### creates Vagrant box from SLP repo if box not already exists
 new_vagrant_box="${sle_slp_dir,,}"
 new_vagrant_box="${new_vagrant_box//-/}"
 if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)" ];then

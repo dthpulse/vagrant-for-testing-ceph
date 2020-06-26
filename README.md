@@ -1136,13 +1136,13 @@ We can manage cluster also with virsh tool
  deployment   2020-05-14 13:24:18 +0200   shutoff
 ```
 
-Our project directory (where Vagrnat files and scripts folder are located) is mounted over NFS to each server under `/vagrant` directory.
+Our project directory (where Vagrant files and scripts folder are located) is mounted over NFS to each server under `/vagrant` directory.
 
 ##### Running tests just with Vagrant
 
 Edit YAML file as described in [Running tests with build validation script](#running-tests-with-build-validation-script)
 
-and additionally enable scripts you want Vagrnat to run on SES cluster. They will run in order as they are in YAML file. 
+and additionally enable scripts you want Vagrant to run on SES cluster. They will run in order as they are in YAML file.
 
 Disadvantage is that Build Validation test will fail if some of the scripts will fail and cluster may stay in broken state. You will need to destroy it and run again.
 
