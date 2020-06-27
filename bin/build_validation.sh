@@ -155,6 +155,7 @@ function revert_to_ses () {
 }
 
 function wait_for_health_ok () {
+    set -x
     while [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health" 2>/dev/null)" != "HEALTH_OK" ]
     do
         if [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health detail  --format=json \
@@ -162,7 +163,7 @@ function wait_for_health_ok () {
                       == "Module 'dashboard' has failed: Timeout('Port 8443 not free on ::.',)" ]
         then
             ssh $ssh_options ${monitors[0]%%.*} -tt << EOF
-cephadm ls |  jq -r '.[] | select(.name|test("mgr.")) | .name'
+cephadm ls | jq -r '.[] | select(.name|test("mgr.")) | .name'
 ceph orch daemon rm \$(ceph orch ps --daemon_type mgr --refresh | awk "/${monitors[0]%%.*}/{print \\\$1}" | tail -1)
 exit
 EOF
