@@ -36,7 +36,8 @@ if [ "$(arch)" == "x86_64" ];then
     ceph-salt config /containers/registries add prefix=registry.suse.de location=192.168.122.1:5000 insecure=true
 fi
 
-ceph-salt config /containers/images/ceph set "registry.suse.de/suse/sle-15-sp2/update/products/ses7/milestones/containers/ses/7/ceph/ceph"
+ceph-salt config /containers/images/ceph set "registry.suse.de/suse/sle-15-sp2/update/products/ses7/update/cr/containers/ses/7/ceph/ceph"
+
 ceph-salt config ls
 
 ceph-salt status
