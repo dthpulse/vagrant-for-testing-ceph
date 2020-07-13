@@ -4,59 +4,31 @@ monitors=($monitors)
 osd_nodes=($osd_nodes)
 master=$master
 
-secret="$(awk '/key/{print $3}' /etc/ceph/ceph.client.admin.keyring)"
+cat << EOF > /tmp/nfs.yaml
+service_type: nfs
+service_id: nfs
+placement:
+ hosts:
+  - ${osd_nodes[0]%%.*}
+  - ${osd_nodes[1]%%.*}
+spec:
+ pool: nfspool
+ namespace: nfsnamespace
+EOF
 
-ceph fs volume create a
+ceph osd pool create nfspool 256
 
-ceph fs status 
+ceph osd pool application enable nfspool nfs
 
-ceph orch apply nfs 1 --pool cephfs.a.data --namespace nfs-ns
+ceph orch apply -i /tmp/nfs.yaml
 
-ceph orch ls nfs --refresh
-
-while [ -z "$(ceph orch ps | grep nfs.1)" ]
-do
-    sleep 10
+while [ -z "$(ceph orch ps | awk '/nfs/ && /running/ {print $0}')" ]; do
+    sleep 15
 done
 
-rados --pool cephfs.a.data --namespace nfs-ns ls
+mount ${osd_node[0]%%.*}:/ /mnt
 
-cat << EOF > export-1
-EXPORT {  
-    export_id = 1;  
-    path = "/";  
-    pseudo = "/";  
-    access_type = "RW";  
-    squash = "no_root_squash";  
-    protocols = 3, 4;  
-    transports = "TCP", "UDP";  
-    FSAL {  
-        name = "CEPH";  
-        user_id = "admin";  
-        filesystem = "a";  
-        secret_access_key = "$secret"
-    }  
-}
-EOF
+mount | grep mnt
 
-rados --pool cephfs.a.data --namespace nfs-ns put export-1 export-1
+touch /mnt/file.txt
 
-cat << EOF > conf-nfs.1
-%url "rados://cephfs.a.data/nfs-ns/export-1"
-EOF
-
-rados --pool cephfs.a.data --namespace nfs-ns put conf-nfs.1 conf-nfs.1
-
-nfs_server=$(ceph orch restart nfs.1 | awk '{print $NF}')
-
-nfs_server=${nfs_server//\'/}
-
-ssh $nfs_server "systemctl start rpcbind.socket"
-
-mount -t nfs -o nfsvers=4.2 ${nfs_server}:/ /mnt
-    
-touch /mnt/$HOSTNAME
-    
-umount /mnt
-
-rm -f conf-nfs.1 export-1
