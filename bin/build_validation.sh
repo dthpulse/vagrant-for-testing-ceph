@@ -155,7 +155,6 @@ function revert_to_ses () {
 }
 
 function wait_for_health_ok () {
-    set -x
     while [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health" 2>/dev/null)" != "HEALTH_OK" ]
     do
         if [ "$(ssh $ssh_options ${monitors[0]%%.*} "ceph health detail  --format=json \
