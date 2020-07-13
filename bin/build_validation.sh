@@ -392,6 +392,8 @@ then
 
     vagrant up 
 
+    if [ $? -ne 0 ];then exit 1;fi
+
     if [ "$(arch)" == "aarch64" ];then
         rsync -aP --delete /etc/libvirt/qemu/ /etc/libvirt/qemu_pflash
     fi
