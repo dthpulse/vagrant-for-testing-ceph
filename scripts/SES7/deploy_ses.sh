@@ -62,7 +62,8 @@ do
                | grep -v default \
                | sed 's/null//g' \
                | tr '\n' ' ' \
-               | awk "/$i/ && /osd./ && ! /down/{print \$0}")" ]
+               | awk "/$i/ && /osd./ && ! /down/{print \$0}")" ] \
+          && [  "$(ceph osd tree --format=json | jq -r '.stray[] | .status' | grep down)" ]
     do
         sleep 60
     done
