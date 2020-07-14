@@ -26,9 +26,9 @@ while [ -z "$(ceph orch ps | awk '/nfs/ && /running/ {print $0}')" ]; do
     sleep 15
 done
 
-mount ${osd_node[0]%%.*}:/ /mnt
-
-mount | grep mnt
-
-touch /mnt/file.txt
+#mount ${osd_node[0]%%.*}:/ /mnt
+#
+#mount | grep mnt
+#
+#touch /mnt/file.txt
 

@@ -4,9 +4,6 @@ function dashboard_url () {
     dashboard_url="$(ceph mgr services | jq -r .dashboard)"
 }
 
-ssh $master "ceph-salt config /cephadm_bootstrap/dashboard/username set admin"
-ssh $master "ceph-salt config /cephadm_bootstrap/dashboard/password set admin"
-
 ceph config set mgr mgr/dashboard/ssl false
 
 ceph mgr module disable dashboard
