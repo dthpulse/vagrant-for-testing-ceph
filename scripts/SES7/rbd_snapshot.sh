@@ -10,7 +10,9 @@ function map_rbd () {
     if [ "$(lsblk -o FSTYPE $rbd_device | tail -1)" != "xfs" ]; then
         mkfs.xfs $rbd_device
     fi
+    test "$(mount | grep mnt)" && umount /mnt
     mount $rbd_device /mnt
+    mount | grep mnt
 }
 
 function snapshot_check () {
@@ -37,7 +39,7 @@ map_rbd "image1"
  
 echo "myfile" > /mnt/myfile.txt
 
-sleep 5
+sleep 180
 
 snapshots=(myfile snap1 snap2)
 
@@ -76,10 +78,6 @@ snapshot_rm "rbdpool" "image1" "snapprotect"
 rbd clone rbdpool/image1@snapprotect rbdpool/image2
 
 map_rbd "image2"
-
-umount /mnt
-
-mount $rbd_device
 
 cat /mnt/myfile.txt | grep "myfile"
 
