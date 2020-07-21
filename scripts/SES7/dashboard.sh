@@ -13,7 +13,7 @@ sleep 15
 
 dashboard_url
 
-while [ "$dashboard_url" == "null" ];do
+while [ "$dashboard_url" == "null" ] || [[ "$dashboard_url" == *"8443"* ]];do
     sleep 10
     dashboard_url
 done
