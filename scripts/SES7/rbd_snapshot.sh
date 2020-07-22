@@ -63,9 +63,9 @@ cat /mnt/myfile.txt | grep myfile
 
 snapshot_rm "rbdpool" "image1" "myfile"
 
-rbd snap purge rbdpool/image1
-
 snapshot_check "${snapshots[*]/myfile}"
+
+rbd snap purge rbdpool/image1
 
 rbd snap create rbdpool/image1@snapprotect
 
