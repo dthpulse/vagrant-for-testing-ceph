@@ -251,12 +251,10 @@ if $config_yaml['custom_cluster']
     File.open($project_dir + "/cluster.yaml", "w") do |d|
         d.write("
 service_type: mon
-service_id: mon
 placement:
   host_pattern: '*#{$config_yaml['monitor']['hostname']}*'
 ---
 service_type: mgr
-service_id: mgr
 placement:
   host_pattern: '*#{$config_yaml['monitor']['hostname']}*'
 ---
