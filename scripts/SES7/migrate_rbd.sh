@@ -19,13 +19,13 @@ parted -s $rbd_image unit % mklabel gpt mkpart 1 xfs 0 100
 
 mkfs.xfs /dev/rbd0p1
 
-mount /dev/${rbd_image}p1 /mnt
+mount ${rbd_image}p1 /mnt
 
 touch /mnt/testfile.txt
 
 umount /mnt
 
-rbdmap unmap-all 2>/dev/null
+rbd device unmap ${rbd_image}
 
 rbd migration prepare srcpool/image1 tgtpool/newimage
 
@@ -35,9 +35,9 @@ rbd migration commit srcpool/image1
 
 rbd map tgtpool/newimage
 
-lsblk | grep ${rbd_image}p1
+lsblk -p | grep ${rbd_image}
 
-mount /dev/rbd0p1 /mnt
+mount ${rbd_image}p1 /mnt
 
 ls /mnt/testfile.txt
 

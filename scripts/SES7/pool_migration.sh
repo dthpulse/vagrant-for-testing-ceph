@@ -6,7 +6,7 @@ monitors=($monitors)
 
 for pool in testpool newpool;do
     ceph osd pool create $pool 128 128
-    ceph osd pool application enable rbd
+    ceph osd pool application enable $pool rbd
 done
 
 rbd create -p testpool image1 --size=1G
