@@ -14,6 +14,10 @@ pgp_num=$pg_num
 
 
 function health_ok() {
+    if [ ! -z "$(ceph crash ls)" ]; then
+        ceph crash archive-all
+    fi
+
     until [ "$(ceph health)" == "HEALTH_OK" ]
     do
     	sleep 30
