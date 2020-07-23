@@ -4,7 +4,7 @@ osd_nodes=($osd_nodes)
 monitors=($monitors)
 master=$master
 
-ceph orch apply mon ${osd_nodes[0]%%.*}
+ceph orch apply mon $(echo ${monitors[*]%%.*} ${osd_nodes[0]%%.*} | sed 's/\ /,/g')
 
 sleep 5
 
