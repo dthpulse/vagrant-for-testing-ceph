@@ -15,7 +15,7 @@ deploy_ses: true
 # You can set SLE registration key from CLI as system environment variable:
 # export sle_reg_key="28738@C3P1G-EXe-eLq7-8eoqehc57v"
 # If kept empty SLE servers will not be registered and updated
-sle_reg_key: 'deedc51104e549deb'
+sle_reg_key:
 
 # SES registration key
 # You can set SES registration key from CLI as system environment variable:
@@ -38,7 +38,7 @@ allow_vendor_change: true
 # if you need to reboot the node on some step, just use 'reboot'. Vagrant
 # will handle it.
 master_cmds:
-        - aa-teardown
+        #- aa-teardown
         - systemctl enable salt-master salt-minion
         - systemctl start salt-master salt-minion; sleep 120
         - salt-key -Ay
