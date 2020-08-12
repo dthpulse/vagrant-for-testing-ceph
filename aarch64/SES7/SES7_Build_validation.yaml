@@ -15,7 +15,7 @@ deploy_ses: true
 # You can set SLE registration key from CLI as system environment variable:
 # export sle_reg_key="28738@C3P1G-EXe-eLq7-8eoqehc57v"
 # If kept empty SLE servers will not be registered and updated
-sle_reg_key: 'deedc51104e549deb'
+sle_reg_key: 'INTERNAL-USE-ONLY-9269-5a81'
 
 # SES registration key
 # You can set SES registration key from CLI as system environment variable:
