@@ -44,25 +44,6 @@ def custom_cmds(config_node, ip_address, host_fqdn, host_alias, node_packages, r
         :mode => "bridge",
         :type => "bridge"
 
-    # run master_cmds or minions_cmds defined in config.yaml
-    if ($config_yaml['deploy_ses'] and $config_yaml['use_scc_repos']) or ($config_yaml['deploy_ses'] and $config_yaml['use_custom_repos'])
-        if !$config_yaml[role_cmds].nil?
-            ($config_yaml[role_cmds]).each do |cmds|
-                # we are calling unix_reboot if 'reboot' is used in custom command
-                if cmds == "reboot"
-                    config_node.vm.provision :shell, :inline => "echo 'config.yaml requested reboot'"
-                    config_node.vm.provision :unix_reboot
-                end
-
-                # Run custom commands except of 'reboot',
-                # this is handled by unix_reboot
-                if cmds != 'reboot'
-                    config_node.vm.provision :shell, :inline => "echo '#{cmds}'; #{cmds}"
-                end
-            end
-        end 
-    end
-    
     # set TERM env on guests
     config_node.vm.provision :shell, :inline => "echo 'export TERM=xterm-256color' > /etc/profile.d/vars.sh"
 
@@ -90,6 +71,9 @@ def custom_cmds(config_node, ip_address, host_fqdn, host_alias, node_packages, r
         config_node.vm.provision :shell, :inline => "echo 'systemctl disable'; systemctl disable" + " " + $config_yaml['disabled_services']*" "
       	config_node.vm.provision :shell, :inline => "echo 'systemctl stop'; systemctl stop" + " " + $config_yaml['disabled_services']*" "
     end
+
+    # unload apparmor profiles
+    config_node.vm.provision :shell, :inline => "echo 'aa-teardown'; test ! -z $(which aa-teardown) && aa-teardown"
     
     # register SES if key is provided and SES deployment is set to 'true' in config.yaml 
     # repositories from SCC
@@ -163,24 +147,24 @@ def custom_cmds(config_node, ip_address, host_fqdn, host_alias, node_packages, r
         config_node.vm.provision :shell, :inline => "echo 'minions.conf'; cp /vagrant/#{$project_dir}/minions.conf /etc/salt/minion.d/minions.conf" 
     end
 
-    ## run master_cmds or minions_cmds defined in config.yaml
-    #if ($config_yaml['deploy_ses'] and $config_yaml['use_scc_repos']) or ($config_yaml['deploy_ses'] and $config_yaml['use_custom_repos'])
-    #    if !$config_yaml[role_cmds].nil?
-    #        ($config_yaml[role_cmds]).each do |cmds|
-    #            # we are calling unix_reboot if 'reboot' is used in custom command
-    #            if cmds == "reboot"
-    #                config_node.vm.provision :shell, :inline => "echo 'config.yaml requested reboot'"
-    #                config_node.vm.provision :unix_reboot
-    #            end
+    # run master_cmds or minions_cmds defined in config.yaml
+    if ($config_yaml['deploy_ses'] and $config_yaml['use_scc_repos']) or ($config_yaml['deploy_ses'] and $config_yaml['use_custom_repos'])
+        if !$config_yaml[role_cmds].nil?
+            ($config_yaml[role_cmds]).each do |cmds|
+                # we are calling unix_reboot if 'reboot' is used in custom command
+                if cmds == "reboot"
+                    config_node.vm.provision :shell, :inline => "echo 'config.yaml requested reboot'"
+                    config_node.vm.provision :unix_reboot
+                end
 
-    #            # Run custom commands except of 'reboot',
-    #            # this is handled by unix_reboot
-    #            if cmds != 'reboot'
-    #                config_node.vm.provision :shell, :inline => "echo '#{cmds}'; #{cmds}"
-    #            end
-    #        end
-    #    end 
-    #end
+                # Run custom commands except of 'reboot',
+                # this is handled by unix_reboot
+                if cmds != 'reboot'
+                    config_node.vm.provision :shell, :inline => "echo '#{cmds}'; #{cmds}"
+                end
+            end
+        end 
+    end
     
     # updates local /etc/hosts file
     # plugin will remove the entries after hosts are shutted down or destroyed

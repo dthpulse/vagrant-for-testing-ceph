@@ -38,13 +38,11 @@ allow_vendor_change: true
 # if you need to reboot the node on some step, just use 'reboot'. Vagrant
 # will handle it.
 master_cmds:
-        - aa-teardown
         - systemctl enable salt-master salt-minion
         - systemctl start salt-master salt-minion; sleep 600
         - salt-key -Ay
 
 minions_cmds:
-        - aa-teardown
         - systemctl enable salt-minion
         - systemctl start salt-minion
         - until nc -z master 4505; do sleep 1;done ; systemctl start salt-minion # wait for mster to be started. You have to define master hostname here.
