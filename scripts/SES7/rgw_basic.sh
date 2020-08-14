@@ -25,7 +25,12 @@ EOF
 
 ceph orch apply -i /tmp/rgw.yaml
 
-while [ -z "$(ceph orch ps --refresh --daemon_type rgw | grep rgw)" ]; do
+n=1
+until [ $n -ge 5 ]
+do
+    ceph orch ps --refresh --daemon_type rgw --format json \
+    | jq -r .[].status_desc | grep error && break
+    n=$((n+1))
     sleep 60
 done
 
