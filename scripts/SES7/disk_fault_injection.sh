@@ -50,10 +50,11 @@ ceph osd tree
 
 (ceph -s | grep ".* osds down" && echo "Failed device recognized by Ceph") || (echo "NOT recognized by Ceph" && exit 1)
 
-while [ "$(ceph osd tree --format json \
-	| jq -r '.nodes[].status | select(.!=null) | select(. | test("down$"))' | wc -l)" -gt 1 ]; do 
+while [ $(ceph health detail --format json | jq -r .checks.OSD_DOWN.detail[].message \
+    | awk '{print $1}' | wc -l) -gt 1 ];do
     sleep 30
 done
+
 
 failed_osd="$(ceph health detail --format json | jq -r .checks.OSD_DOWN.detail[].message | awk '{print $1}')"
 

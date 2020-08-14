@@ -21,6 +21,8 @@ while [ "$(ceph orch ps --daemon_type mds --format json | jq -r '.[].status_desc
     sleep 10
 done
 
+sleep 15
+
 mount -t ceph $mount_monitors:/ /mnt/cephfs -o name=admin,secret=$(echo $secret | tr -d ' ')
 
 mount | grep "/mnt/cephfs"

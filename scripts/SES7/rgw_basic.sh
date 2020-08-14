@@ -31,7 +31,7 @@ do
    status="$(ceph orch ps --refresh --daemon_type rgw --format json | jq -r .[].status_desc)"
    echo "$status" | grep "running" && break
    n=$((n+1))
-   sleep 15
+   sleep 60
 done
 
 if [ "$status" != "running" ]; then

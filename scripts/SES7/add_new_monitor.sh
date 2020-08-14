@@ -6,8 +6,17 @@ master=$master
 
 ceph orch apply mon $(echo ${monitors[*]%%.*} ${osd_nodes[0]%%.*} | sed 's/\ /,/g')
 
-sleep 5
+sleep 60
 
-timeout -k 180 180 ceph -s || exit 1
+n=1
+until [ $n -ge 5 ]
+do
+   status="$(ceph orch ps --daemon_type mon --format json | jq -r .[].daemon_id)"
+   echo "$status" | grep "${osd_nodes[0]}" && break
+   n=$((n+1))
+   sleep 60
+done
 
-ceph orch ps --daemon_type mon --refresh | grep osd-node1 || exit 1
+if [ "$status" != "${osd_nodes[0]}" ]; then
+    exit 1
+fi
