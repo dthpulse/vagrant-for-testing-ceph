@@ -25,6 +25,7 @@ EOF
 
 ceph orch apply -i /tmp/rgw.yaml
 
-sleep 60
+while [ -z "$(ceph orch ps --refresh --daemon_type rgw | grep rgw)" ]; do
+    sleep 60
+done
 
-ceph orch ps --refresh --daemon_type rgw | grep rgw
