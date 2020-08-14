@@ -19,18 +19,21 @@ service_id: realm1.zone1
 placement:
  hosts:
   - ${osd_nodes[0]%%.*}
-  - ${osd_nodes[1]%%.*}
-  - ${osd_nodes[2]%%.*}
 EOF
 
 ceph orch apply -i /tmp/rgw.yaml
 
+sleep 60
+
 n=1
 until [ $n -ge 5 ]
 do
-    ceph orch ps --refresh --daemon_type rgw --format json \
-    | jq -r .[].status_desc | grep running && break
-    n=$((n+1))
-    sleep 60
+   status="$(ceph orch ps --refresh --daemon_type rgw --format json | jq -r .[].status_desc)"
+   echo "$status" | grep "running" && break
+   n=$((n+1))
+   sleep 15
 done
 
+if [ "$status" != "running" ]; then
+    exit 1
+fi
