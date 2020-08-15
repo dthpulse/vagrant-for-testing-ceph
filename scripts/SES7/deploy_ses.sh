@@ -72,3 +72,9 @@ do
 done
 
 ceph -s
+
+ceph mgr module disable dashboard
+
+while [ "$(ceph mgr services --format json | jq -r .dashboard)" != "null" ];do 
+    sleep 5
+done
