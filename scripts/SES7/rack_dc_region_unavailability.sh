@@ -69,7 +69,7 @@ function wait_until_down() {
 
 function check_container_exists () {
     local old_container=$1
-    local chck_container=$(podman ps --format json | jq -r .[].ID)
+    local chck_container=$(podman ps | awk 'FNR==2{print $1}')
     if [ "$old_container" != "$chck_container" ]
     then
         container="$chck_container"        
@@ -80,7 +80,7 @@ function check_container_exists () {
 }
 
 domain="${master#*.}"
-container=$(podman ps --format json | jq -r .[].ID)
+container=$(podman ps | awk 'FNR==2{print $1}')
 crushmap_file="crushmap"
 echo "Getting crushmap"
 podman cp /etc/ceph/ceph.client.admin.keyring ${container}:/etc/ceph/ceph.client.admin.keyring
