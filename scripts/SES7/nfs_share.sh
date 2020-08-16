@@ -19,6 +19,21 @@ do
     sleep 10
 done
 
+sleep 60
+
+n=1
+until [ $n -ge 5 ]
+do
+   status="$(ceph orch ps --daemon_type nfs --refresh --format json | jq -r .[].status_desc)"
+   echo "$status" | grep "running" && break
+   n=$((n+1))
+   sleep 60
+done
+
+if [ ! "$(echo $status | grep "running")" ]; then
+    exit 1
+fi
+
 rados --pool cephfs.a.data --namespace nfs-ns ls
 
 cat << EOF > export-1

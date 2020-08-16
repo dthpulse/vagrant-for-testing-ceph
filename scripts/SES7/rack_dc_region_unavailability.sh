@@ -69,23 +69,25 @@ function wait_until_down() {
 
 function check_container_exists () {
     local old_container=$1
-    local chck_container=$(podman ps | awk 'FNR==2{print $1}')
+    local chck_container=$(podman ps --format json | jq -r .[].ID)
     if [ "$old_container" != "$chck_container" ]
     then
         container="$chck_container"        
         podman cp /etc/ceph/ceph.client.admin.keyring ${container}:/etc/ceph/ceph.client.admin.keyring
         podman cp /tmp/${crushmap_file}.txt ${container}:/tmp/${crushmap_file}.txt
+        podman cp /tmp/${crushmap_file}.bin ${container}:/tmp/${crushmap_file}.bin
     fi
 }
 
 domain="${master#*.}"
-container=$(podman ps | awk 'FNR==2{print $1}')
+container=$(podman ps --format json | jq -r .[].ID)
 crushmap_file="crushmap"
 echo "Getting crushmap"
 podman cp /etc/ceph/ceph.client.admin.keyring ${container}:/etc/ceph/ceph.client.admin.keyring
 podman exec $container ceph osd getcrushmap -o /tmp/${crushmap_file}.bin
 podman exec $container crushtool -d /tmp/${crushmap_file}.bin -o /tmp/${crushmap_file}.txt
 podman cp ${container}:/tmp/${crushmap_file}.txt /tmp/${crushmap_file}.txt
+podman cp ${container}:/tmp/${crushmap_file}.bin /tmp/${crushmap_file}.bin
 
 echo "Getting data from crushmap"
 hosts=($(grep ^host /tmp/${crushmap_file}.txt | awk '{print $2}' | sort -u))
