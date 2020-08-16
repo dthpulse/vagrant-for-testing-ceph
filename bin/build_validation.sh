@@ -104,7 +104,7 @@ function create_snapshot () {
         echo
         echo "Collecting supportconfig files"
         echo
-        pdsh -S -w ${ses_cluster// /,} "supportconfig" 2>&1 >/dev/null
+        pdsh -S -w ${ses_cluster// /,} "supportconfig" >/dev/null 2>&1
         mkdir -p logs/${script%%.*} 2>/dev/null
         rpdcp -w ${ses_cluster// /,} /var/log/scc_* logs/${script%%.*}/
         pdsh -w ${ses_cluster// /,} "rm -rf /var/log/scc_*"
@@ -137,7 +137,7 @@ function revert_to_ses () {
     for node in ${ses_cluster[@]%%.*}
     do
         node="${project}_${node}"
-        virsh snapshot-revert $node deployment 2>&1 > /dev/null
+        virsh snapshot-revert $node deployment >/dev/null 2>&1
     done
 
     if [ "$(arch)" == "aarch64" ];then
