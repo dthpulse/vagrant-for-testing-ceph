@@ -21,7 +21,7 @@ sle_reg_key:
 # You can set SES registration key from CLI as system environment variable:
 # export ses_reg_key="20676@C313G01-S3S-698fjh105"
 # If kept empty Ceph will not be deployed (valid for SCC repos)
-ses_reg_key: 'deedc51104e549deb'
+ses_reg_key:
 
 # NTP server
 # if kept empty then ntp.suse.cz is configured on the VMs
