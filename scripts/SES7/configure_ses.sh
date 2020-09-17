@@ -10,4 +10,4 @@ ceph config set osd debug_ms 1
 
 ceph config set osd cluster_network 192.168.121.0/24
 
-ceph config set mgr/crash/warn_recent_interval 0
+ceph config set global mgr/crash/warn_recent_interval 0
