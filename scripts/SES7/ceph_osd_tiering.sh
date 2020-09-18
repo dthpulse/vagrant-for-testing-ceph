@@ -13,6 +13,11 @@ pg_num=$(power2 $(echo "(($osd_num*$recommended_pg_per_osd) / $size) / ($num_of_
 pgp_num=$pg_num
 
 # testing part
+if [ $(arch) == "aarch64" ]; then
+    count=5
+else
+    count=100
+fi
 
 ### Creating pool for cold storage ###
 ceph osd pool create cold-storage $pg_num $pgp_num replicated
@@ -53,7 +58,7 @@ parted -s $rbd_dev  unit % mklabel gpt mkpart 1 xfs 0 100
 lsblk
 mkfs.xfs ${rbd_dev}p1
 mount ${rbd_dev}p1 /mnt
-dd if=/dev/zero of=/mnt/file.bin count=100 bs=1M status=progress oflag=direct
+dd if=/dev/zero of=/mnt/file.bin count=$count bs=1M status=progress oflag=direct
 
 ### Removing tiering ###
 umount /mnt

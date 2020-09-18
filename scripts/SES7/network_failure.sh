@@ -30,6 +30,11 @@ ceph osd pool create $1 $pg_num $pg_num
 ceph osd pool application enable $1 rbd
 }
 
+if [ $(arch) == "aarch64" ]; then
+    count=5
+else
+    count=100
+fi
 create_pool networkfailure 
 pool_name="networkfailure"
 rbd -p $pool_name create image1 --size 2G
@@ -41,7 +46,7 @@ mount ${rbd_device}p1 /mnt
 function nettest () {
     local test_name=$1
     set +x
-    time_consumed+="$test_name - $( (time dd if=/dev/zero  of=/mnt/file1.bin count=100 bs=1M oflag=direct >/dev/null 2>&1) 2>&1 | sed '/^$/d' | head -1); "
+    time_consumed+="$test_name - $( (time dd if=/dev/zero  of=/mnt/file1.bin count=$count bs=1M oflag=direct >/dev/null 2>&1) 2>&1 | sed '/^$/d' | head -1); "
     set -x
     ls -l /mnt/file1.bin
     rm -f /mnt/file1.bin

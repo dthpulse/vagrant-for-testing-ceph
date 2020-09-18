@@ -13,6 +13,12 @@ recommended_pg_per_osd=100
 pg_num=$(power2 $(echo "(($osd_num*$recommended_pg_per_osd) / $size) / ($num_of_existing_pools + $num_of_pools)" | bc))
 pgp_num=$pg_num
 
+if [ $(arch) == "aarch64" ]; then
+    count=5
+else
+    count=100
+fi
+
 for mode in passive aggressive force
 do 
 
@@ -43,7 +49,7 @@ do
 
 	mount ${rbd_dev}p1 /mnt/pool_$mode
 
-	dd if=/dev/zero of=/mnt/pool_$mode/file.bin bs=1M count=100 status=progress oflag=direct
+	dd if=/dev/zero of=/mnt/pool_$mode/file.bin bs=1M count=$count status=progress oflag=direct
 
 	rbd du -p pool_${mode} image1
 
