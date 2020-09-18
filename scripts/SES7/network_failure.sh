@@ -30,7 +30,7 @@ ceph osd pool create $1 $pg_num $pg_num
 ceph osd pool application enable $1 rbd
 }
 
-if [ $(arch) == "aarch64" ]; then
+if [ "$(arch)" == "aarch64" ]; then
     count=5
 else
     count=100

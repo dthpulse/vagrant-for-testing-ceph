@@ -13,7 +13,7 @@ pg_num=$(power2 $(echo "(($osd_num*$recommended_pg_per_osd) / $size) / ($num_of_
 pgp_num=$pg_num
 
 # testing part
-if [ $(arch) == "aarch64" ]; then
+if [ "$(arch)" == "aarch64" ]; then
     count=5
 else
     count=100

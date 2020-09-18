@@ -13,7 +13,7 @@ recommended_pg_per_osd=100
 pg_num=$(power2 $(echo "(($osd_num*$recommended_pg_per_osd) / $size) / ($num_of_existing_pools + $num_of_pools)" | bc))
 pgp_num=$pg_num
 
-if [ $(arch) == "aarch64" ]; then
+if [ "$(arch)" == "aarch64" ]; then
     count=5
 else
     count=100

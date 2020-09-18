@@ -5,7 +5,7 @@ master=$master
 
 random_minion_fqdn=${monitors[0]}
 
-if [ $(arch) == "aarch64" ]; then
+if [ "$(arch)" == "aarch64" ]; then
     count=5
 else
     count=100
