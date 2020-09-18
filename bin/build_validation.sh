@@ -91,7 +91,7 @@ function vssh_script () {
     local script="$2"
     echo "WWWWW $script WWWWW"
     pdsh -S -w $node "find /var/log -type f -exec truncate -s 0 {} \;"
-    pdsh -S -w $node "timeout -s SIGKILL 1200 bash /scripts/$script"
+    pdsh -S -w $node "timeout -s SIGKILL 1h bash /scripts/$script"
     script_exit_value=$?
 }
 
