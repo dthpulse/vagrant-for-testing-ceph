@@ -91,7 +91,11 @@ function vssh_script () {
     local script="$2"
     echo "WWWWW $script WWWWW"
     pdsh -S -w $node "find /var/log -type f -exec truncate -s 0 {} \;"
-    pdsh -S -w $node "timeout -s SIGKILL 1h bash /scripts/$script | true"
+    if [ "$script" == "deploy_ses.sh" ]; then
+        pdsh -S -w $node "bash /scripts/$script"
+    else
+        pdsh -S -w $node "timeout -s SIGKILL 1h bash /scripts/$script"
+    fi
     script_exit_value=$?
 }
 
