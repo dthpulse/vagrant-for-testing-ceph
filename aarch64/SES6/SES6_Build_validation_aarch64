@@ -180,7 +180,7 @@ end
 #### Runs bash scripts defined in config.yaml
 def bash_scripts(config, node_role)
 
-	config.vm.provision "file", source: "./scripts/config.conf", destination: "/tmp/config.conf"
+	config.vm.provision "file", source: "./scripts/SES6/config.conf", destination: "/tmp/config.conf"
 
 	if node_role =~ /master/
 		run_on = "#{$config_yaml['master']['hostname']}"
@@ -307,8 +307,8 @@ role-storage/cluster/#{$config_yaml['osd_node']['hostname']}*.sls
 	       	end
 
 	        # update config.conf file with master hostname
-                updated_hostname=File.read("scripts/config.conf").sub(/master=(.*)/, "master=#{host_alias}")
-	       	File.open("scripts/config.conf", "w") { |file| file.puts updated_hostname }
+                updated_hostname=File.read("scripts/SES6/config.conf").sub(/master=(.*)/, "master=#{host_alias}")
+	       	File.open("scripts/SES6/config.conf", "w") { |file| file.puts updated_hostname }
 
 	        # creates clients.conf file
          	if !$config_yaml['clients'].nil?
