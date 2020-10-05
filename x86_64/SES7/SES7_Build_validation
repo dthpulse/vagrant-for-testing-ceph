@@ -48,10 +48,10 @@ def custom_cmds(config_node, ip_address, host_fqdn, host_alias, node_packages, r
     config_node.vm.provision :shell, :inline => "echo 'export TERM=xterm-256color' > /etc/profile.d/vars.sh"
 
     # add /vagrant to fstab
-    config_node.vm.provision :shell, :inline => "echo 'fstab'; echo \"$(mount | awk '/vagrant/{print $1, $3, $5}') defaults 0 0\" >> /etc/fstab"
+    config_node.vm.provision :shell, :inline => "echo 'fstab'; echo \"$(mount | awk '/vagrant/{print $1, $3, $5}') nfsvers=3,proto=udp 0 0\" >> /etc/fstab"
 
     # add scripts to fstab
-    config_node.vm.provision :shell, :inline => "echo 'scripts to fstab'; mkdir /scripts; echo \"192.168.121.1:#{Dir.pwd}/scripts /scripts nfs defaults 0 0\" >> /etc/fstab; mount -a"
+    config_node.vm.provision :shell, :inline => "echo 'scripts to fstab'; mkdir /scripts; echo \"192.168.121.1:#{Dir.pwd}/scripts /scripts nfs nfsvers=3,proto=udp 0 0\" >> /etc/fstab; mount -a"
 
     # reboot wicked to keep hostname
     config_node.vm.provision :shell, :inline => "echo 'rebooting wicked'; test -f /usr/lib/systemd/system/wicked.service && systemctl restart wicked"

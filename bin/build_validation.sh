@@ -64,6 +64,7 @@ do
                        shift 2;;
         --ses-ibs-dir) ses_slp_dir=$2
                        ses_url="http://download.suse.de/ibs/Devel:/Storage:/7.0/images/repo/$ses_slp_dir"
+                       #ses_url="http://download.suse.de/ibs/SUSE:/SLE-15-SP2:/Update:/Products:/SES7/images/repo/$ses_slp_dir"
                        shift 2;;
         --no-clients) no_clients=true; shift;;
         --help|-h) helpme; exit;;
@@ -297,7 +298,7 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
         sed -i "s/REPLACE_ME/${sle_url//\//\\/}/g" /srv/www/htdocs/autoyast_intel.xml
 
         virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
-        --disk bus=virtio,path=/qemu/pools/default/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
+        --disk bus=virtio,path=$qemu_default_pool/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
         --network bridge=virbr0,model=virtio --connect qemu:///system  --os-type linux \
         --os-variant sle15sp2 --virt-type kvm --noautoconsole --accelerate \
         --location $sle_url \
@@ -310,7 +311,7 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
         sed -i "s/REPLACE_ME/${sle_url//\//\\/}/g" /srv/www/htdocs/autoyast_aarch64.xml
 
         virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
-        --disk bus=virtio,path=/qemu/pools/default/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
+        --disk bus=virtio,path=$qemu_default_pool/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
         --network bridge=virbr0,model=virtio --connect qemu:///system  --os-type linux \
         --os-variant sle15sp2 --arch aarch64 --noautoconsole --accelerate \
         --location $sle_url \
