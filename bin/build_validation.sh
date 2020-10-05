@@ -236,7 +236,7 @@ else
          -exec basename {} \;)
 fi
 ssh_options="-i ~/.ssh/storage-automation -l root -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-qemu_default_pool="$(virsh pool-dumpxml default | grep path | sed 's/<.path>//; s/<path>//')"
+qemu_default_pool="$(virsh pool-dumpxml default | grep path | sed 's/<.path>//; s/<path>//; s/^[ \t]*//')"
 libvirt_default_ip="$(virsh net-dumpxml default | awk '/ip address/{print $2}' | cut -d = -f 2 | sed "s/'//g")"
 
 ### Creates repo files
