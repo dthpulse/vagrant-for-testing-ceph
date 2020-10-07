@@ -86,6 +86,12 @@ then
     exit 1
 fi
 
+if [ ! -f "$HOME/.ssh/storage-automation" ]
+then
+    echo "Missing file $HOME/.ssh/storage-automation"
+    exit 1
+fi
+
 sudo --validate
 if [ $? -ne 0 ]
 then
