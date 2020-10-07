@@ -105,11 +105,11 @@ function vssh_script () {
     local node=$1
     local script="$2"
     echo "WWWWW $script WWWWW"
-    pdsh -S -w $node "find /var/log -type f -exec truncate -s 0 {} \;"
+    pdsh -S -l root -w $node "find /var/log -type f -exec truncate -s 0 {} \;"
     if [ "$script" == "deploy_ses.sh" ]; then
-        pdsh -S -w $node "bash /scripts/$script"
+        pdsh -S -l root -w $node "bash /scripts/$script"
     else
-        pdsh -S -w $node "timeout -s SIGKILL 1h bash /scripts/$script"
+        pdsh -S -l root -w $node "timeout -s SIGKILL 1h bash /scripts/$script"
     fi
     script_exit_value=$?
 }
@@ -123,10 +123,10 @@ function create_snapshot () {
         echo
         echo "Collecting supportconfig files"
         echo
-        pdsh -S -w ${ses_cluster// /,} "supportconfig" >/dev/null 2>&1
+        pdsh -S -l root -w ${ses_cluster// /,} "supportconfig" >/dev/null 2>&1
         mkdir -p logs/${script%%.*} 2>/dev/null
-        rpdcp -w ${ses_cluster// /,} /var/log/scc_* logs/${script%%.*}/
-        pdsh -w ${ses_cluster// /,} "rm -rf /var/log/scc_*"
+        rpdcp -l root -w ${ses_cluster// /,} /var/log/scc_* logs/${script%%.*}/
+        pdsh -l root -w ${ses_cluster// /,} "rm -rf /var/log/scc_*"
         for node in $nodes
         do
             sudo virsh destroy ${project}_${node}
@@ -219,7 +219,7 @@ EOF
 function destroy_existing_cluster () {
     nodes_list=($(vagrant status | awk '/libvirt/{print $1}'))
     sudo virsh list --all --name | grep ${project}_ | xargs -I {} sudo virsh destroy {}
-    rm -f ${qemu_default_pool}/${project}_*
+    sudo bash -c "rm -f ${qemu_default_pool}/${project}_*"
     sudo systemctl restart libvirtd
     for node in ${nodes_list[@]}
     do
