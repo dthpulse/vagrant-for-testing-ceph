@@ -13,9 +13,9 @@ FileUtils.mkdir_p $project_name + '-files'
 ### Export project directory to the world    ###
 ### will prevent us from some Vagrant errors ###
 ################################################
-system("test \"`grep \"$(pwd) \\*\" /etc/exports`\" || echo \"$(pwd) \*(rw,sync,wdelay,hide,no_subtree_check,anonuid=0,anongid=0,sec=sys,secure,root_squash,all_squash)\" >> /etc/exports")
-system("test \"`grep \"$(pwd)/scripts \\*\" /etc/exports`\" || echo \"$(pwd)/scripts \*(rw,sync,wdelay,hide,no_subtree_check,anonuid=0,anongid=0,sec=sys,secure,root_squash,all_squash)\" >> /etc/exports")
-system("exportfs -a > /dev/null 2>&1")
+system("test \"`grep \"$(pwd) \\*\" /etc/exports`\" || echo \"$(pwd) \*(rw,sync,wdelay,hide,no_subtree_check,anonuid=0,anongid=0,sec=sys,secure,root_squash,all_squash)\" | sudo tee -a /etc/exports > /dev/null 2>&1")
+system("test \"`grep \"$(pwd)/scripts \\*\" /etc/exports`\" || echo \"$(pwd)/scripts \*(rw,sync,wdelay,hide,no_subtree_check,anonuid=0,anongid=0,sec=sys,secure,root_squash,all_squash)\" | sudo tee -a /etc/exports > /dev/null 2>&1")
+system("sudo exportfs -a > /dev/null 2>&1")
 
 ####################################
 ### generate ssh keys for master ###

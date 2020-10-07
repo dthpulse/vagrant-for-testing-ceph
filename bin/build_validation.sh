@@ -3,6 +3,8 @@
 
 source $HOME/.bashrc
 
+
+
 TEMP=$(getopt -o h --long "no-clients,vagrant-box:,vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,destroy-before-deploy,sle-slp-dir:,ses-slp-dir:,ses-ibs-dir:" -n 'build_validation.sh' -- "$@")
 
 
@@ -78,6 +80,19 @@ then
     exit 1
 fi
 
+if [ -z "$VAGRANT_HOME" ]
+then
+    echo "variable VAGRANT_HOME not set"
+    exit 1
+fi
+
+sudo --validate
+if [ $? -ne 0 ]
+then
+    echo "user $USER has not sudo privilegies"
+    exit 1
+fi
+
 if [ -d "logs" ] && [ "$(ls -A logs 2>/dev/null)" ];then
     archive_name="logs_$(date +%F-%H-%M).txz"
     echo "creating archive $archive_name from existing logs"
@@ -121,7 +136,7 @@ function create_snapshot () {
         done
          
         if [ "$(arch)" == "aarch64" ];then
-            systemctl restart libvirtd
+            sudo systemctl restart libvirtd
         fi
 
         for node in $nodes
@@ -130,7 +145,7 @@ function create_snapshot () {
         done
         if [ "$(arch)" == "aarch64" ];then
             rsync -aP /etc/libvirt/qemu_pflash/ /etc/libvirt/qemu/
-            systemctl restart libvirtd
+            sudo systemctl restart libvirtd
         fi
 
     fi
@@ -146,7 +161,7 @@ function revert_to_ses () {
 
     if [ "$(arch)" == "aarch64" ];then
         rsync -aP /etc/libvirt/qemu_pflash/ /etc/libvirt/qemu/
-        systemctl restart libvirtd
+        sudo systemctl restart libvirtd
     fi
 
     for node in ${ses_cluster[@]%%.*}
@@ -205,7 +220,7 @@ function destroy_existing_cluster () {
     nodes_list=($(vagrant status | awk '/libvirt/{print $1}'))
     sudo virsh list --all --name | grep ${project}_ | xargs -I {} sudo virsh destroy {}
     rm -f ${qemu_default_pool}/${project}_*
-    systemctl restart libvirtd
+    sudo systemctl restart libvirtd
     for node in ${nodes_list[@]}
     do
         for snap in $(sudo virsh snapshot-list --name ${project}_${node})
@@ -355,7 +370,7 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
     
     ln -s $VAGRANT_HOME/boxes/$vagrant_box/0/libvirt/box.img $qemu_default_pool/${vagrant_box}_vagrant_box_image_0.img
     
-    systemctl restart libvirtd
+    sudo systemctl restart libvirtd
     
     rm -f /srv/www/htdocs/autoyast_{intel,aarch64}.xml
 else
