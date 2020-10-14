@@ -5,7 +5,7 @@ source $HOME/.bashrc
 
 
 
-TEMP=$(getopt -o h --long "no-clients,vagrant-box:,vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,destroy-before-deploy,sle-slp-dir:,ses-slp-dir:,ses-ibs-dir:" -n 'build_validation.sh' -- "$@")
+TEMP=$(getopt -o h --long "help,no-clients,vagrant-box:,vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,destroy-before-deploy,sle-slp-dir:,ses-slp-dir:,ses-ibs-dir:" -n 'build_validation.sh' -- "$@")
 
 
 if [ $? -ne 0 ]; then echo "Terminating ..." >&2; exit 1; fi
