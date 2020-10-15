@@ -1,9 +1,11 @@
 #!/usr/bin/env bash 
 
 
-source /root/.bashrc
+source $HOME/.bashrc
 
-TEMP=$(getopt -o h --long "no-clients,vagrant-box:,vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,destroy-before-deploy,sle-slp-dir:,ses-slp-dir:,ses-ibs-dir:" -n 'build_validation.sh' -- "$@")
+
+
+TEMP=$(getopt -o h --long "help,no-clients,vagrant-box:,vagrantfile:,ses-only,destroy,all-scripts,only-script:,existing,only-salt-cluster,destroy-before-deploy,sle-slp-dir:,ses-slp-dir:,ses-ibs-dir:" -n 'build_validation.sh' -- "$@")
 
 
 if [ $? -ne 0 ]; then echo "Terminating ..." >&2; exit 1; fi
@@ -64,7 +66,6 @@ do
                        shift 2;;
         --ses-ibs-dir) ses_slp_dir=$2
                        ses_url="http://download.suse.de/ibs/Devel:/Storage:/7.0/images/repo/$ses_slp_dir"
-                       #ses_url="http://download.suse.de/ibs/SUSE:/SLE-15-SP2:/Update:/Products:/SES7/images/repo/$ses_slp_dir"
                        shift 2;;
         --no-clients) no_clients=true; shift;;
         --help|-h) helpme; exit;;
@@ -76,6 +77,25 @@ done
 if [ -z "$VAGRANT_VAGRANTFILE" ]
 then
     echo "Missing VAGRANTFILE"
+    exit 1
+fi
+
+if [ -z "$VAGRANT_HOME" ]
+then
+    echo "variable VAGRANT_HOME not set"
+    exit 1
+fi
+
+if [ ! -f "$HOME/.ssh/storage-automation" ]
+then
+    echo "Missing file $HOME/.ssh/storage-automation"
+    exit 1
+fi
+
+sudo --validate
+if [ $? -ne 0 ]
+then
+    echo "user $USER has not sudo privilegies"
     exit 1
 fi
 
@@ -91,11 +111,11 @@ function vssh_script () {
     local node=$1
     local script="$2"
     echo "WWWWW $script WWWWW"
-    pdsh -S -w $node "find /var/log -type f -exec truncate -s 0 {} \;"
+    pdsh -S -l root -w $node "find /var/log -type f -exec truncate -s 0 {} \;"
     if [ "$script" == "deploy_ses.sh" ]; then
-        pdsh -S -w $node "bash /scripts/$script"
+        pdsh -S -l root -w $node "bash /scripts/$script"
     else
-        pdsh -S -w $node "timeout -s SIGKILL 1h bash /scripts/$script"
+        pdsh -S -l root -w $node "timeout -s SIGKILL 1h bash /scripts/$script"
     fi
     script_exit_value=$?
 }
@@ -109,29 +129,29 @@ function create_snapshot () {
         echo
         echo "Collecting supportconfig files"
         echo
-        pdsh -S -w ${ses_cluster// /,} "supportconfig" >/dev/null 2>&1
+        pdsh -S -l root -w ${ses_cluster// /,} "supportconfig" >/dev/null 2>&1
         mkdir -p logs/${script%%.*} 2>/dev/null
-        rpdcp -w ${ses_cluster// /,} /var/log/scc_* logs/${script%%.*}/
-        pdsh -w ${ses_cluster// /,} "rm -rf /var/log/scc_*"
+        rpdcp -l root -w ${ses_cluster// /,} /var/log/scc_* logs/${script%%.*}/
+        pdsh -l root -w ${ses_cluster// /,} "rm -rf /var/log/scc_*"
         for node in $nodes
         do
-            virsh destroy ${project}_${node}
+            sudo virsh destroy ${project}_${node}
             if [ "$(arch)" == "aarch64" ];then
                 sed -i '/pflash/d; /acpi/d; /apic/d' /etc/libvirt/qemu/${project}_${node}.xml
             fi
         done
          
         if [ "$(arch)" == "aarch64" ];then
-            systemctl restart libvirtd
+            sudo systemctl restart libvirtd
         fi
 
         for node in $nodes
         do
-            virsh snapshot-create-as ${project}_${node} ${script%%.*}
+            sudo virsh snapshot-create-as ${project}_${node} ${script%%.*}
         done
         if [ "$(arch)" == "aarch64" ];then
             rsync -aP /etc/libvirt/qemu_pflash/ /etc/libvirt/qemu/
-            systemctl restart libvirtd
+            sudo systemctl restart libvirtd
         fi
 
     fi
@@ -142,18 +162,18 @@ function revert_to_ses () {
     for node in ${ses_cluster[@]%%.*}
     do
         node="${project}_${node}"
-        virsh snapshot-revert $node deployment >/dev/null 2>&1
+        sudo virsh snapshot-revert $node deployment >/dev/null 2>&1
     done
 
     if [ "$(arch)" == "aarch64" ];then
         rsync -aP /etc/libvirt/qemu_pflash/ /etc/libvirt/qemu/
-        systemctl restart libvirtd
+        sudo systemctl restart libvirtd
     fi
 
     for node in ${ses_cluster[@]%%.*}
     do
         node="${project}_${node}"
-        virsh start $node
+        sudo virsh start $node
     done
 
     sleep 30
@@ -204,21 +224,21 @@ EOF
 
 function destroy_existing_cluster () {
     nodes_list=($(vagrant status | awk '/libvirt/{print $1}'))
-    virsh list --all --name | grep ${project}_ | xargs -I {} virsh destroy {}
-    rm -f ${qemu_default_pool}/${project}_*
-    systemctl restart libvirtd
+    sudo virsh list --all --name | grep ${project}_ | xargs -I {} sudo virsh destroy {}
+    sudo bash -c "rm -f ${qemu_default_pool}/${project}_*"
+    sudo systemctl restart libvirtd
     for node in ${nodes_list[@]}
     do
-        for snap in $(virsh snapshot-list --name ${project}_${node})
+        for snap in $(sudo virsh snapshot-list --name ${project}_${node})
         do
-            virsh snapshot-delete ${project}_${node} $snap
+            sudo virsh snapshot-delete ${project}_${node} $snap
         done
     done
 
     if [ "$(arch)" == "aarch64" ];then
-        virsh list --all --name | grep ${project}_ | xargs -I {} virsh undefine {} --nvram
+        sudo virsh list --all --name | grep ${project}_ | xargs -I {} sudo virsh undefine {} --nvram
     else
-        virsh list --all --name | grep ${project}_ | xargs -I {} virsh undefine {}
+        sudo virsh list --all --name | grep ${project}_ | xargs -I {} sudo virsh undefine {}
     fi
 
     vagrant destroy -f
@@ -236,8 +256,8 @@ else
          -exec basename {} \;)
 fi
 ssh_options="-i ~/.ssh/storage-automation -l root -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-qemu_default_pool="$(virsh pool-dumpxml default | grep path | sed 's/<.path>//; s/<path>//; s/^[ \t]*//')"
-libvirt_default_ip="$(virsh net-dumpxml default | awk '/ip address/{print $2}' | cut -d = -f 2 | sed "s/'//g")"
+qemu_default_pool="$(sudo virsh pool-dumpxml default | grep path | sed 's/<.path>//; s/<path>//; s/^[ \t]*//')"
+libvirt_default_ip="$(sudo virsh net-dumpxml default | awk '/ip address/{print $2}' | cut -d = -f 2 | sed "s/'//g")"
 
 ### Creates repo files
 cat << EOF > /srv/www/htdocs/current_os.repo
@@ -292,12 +312,12 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
     
     if [ "$(arch)" == "x86_64" ]; then
         if [ -f "/srv/www/htdocs/autoyast_intel.xml" ];then
-            mv  /srv/www/htdocs/autoyast_intel.xml /srv/www/htdocs/autoyast_intel.xml.$(date +%F-%H%M)
+            sudo mv /srv/www/htdocs/autoyast_intel.xml /srv/www/htdocs/autoyast_intel.xml.$(date +%F-%H%M)
         fi
-        cp $(dirname $(realpath $0))/../autoyast/autoyast_intel.xml /srv/www/htdocs/autoyast_intel.xml
-        sed -i "s/REPLACE_ME/${sle_url//\//\\/}/g" /srv/www/htdocs/autoyast_intel.xml
+        sudo cp $(dirname $(realpath $0))/../autoyast/autoyast_intel.xml /srv/www/htdocs/autoyast_intel.xml
+        sudo sed -i "s/REPLACE_ME/${sle_url//\//\\/}/g" /srv/www/htdocs/autoyast_intel.xml
 
-        virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
+        sudo virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
         --disk bus=virtio,path=$qemu_default_pool/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
         --network bridge=virbr0,model=virtio --connect qemu:///system  --os-type linux \
         --os-variant sle15sp2 --virt-type kvm --noautoconsole --accelerate \
@@ -305,12 +325,12 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
         --extra-args="console=tty0 console=ttyS0,115200n8 autoyast=http://$libvirt_default_ip/autoyast_intel.xml"
     elif [ "$(arch)" == "aarch64" ];then
         if [ -f "/srv/www/htdocs/autoyast_aarch64.xml" ];then
-            mv  /srv/www/htdocs/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml.$(date +%F-%H%M)
+            sudo mv /srv/www/htdocs/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml.$(date +%F-%H%M)
         fi
-        cp $(dirname $(realpath $0))/../autoyast/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml
-        sed -i "s/REPLACE_ME/${sle_url//\//\\/}/g" /srv/www/htdocs/autoyast_aarch64.xml
+        sudo cp $(dirname $(realpath $0))/../autoyast/autoyast_aarch64.xml /srv/www/htdocs/autoyast_aarch64.xml
+        sudo sed -i "s/REPLACE_ME/${sle_url//\//\\/}/g" /srv/www/htdocs/autoyast_aarch64.xml
 
-        virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
+        sudo virt-install --name vgrbox --memory 2048 --vcpus 1 --hvm \
         --disk bus=virtio,path=$qemu_default_pool/vgrbox.qcow2,cache=none,format=qcow2,size=10  \
         --network bridge=virbr0,model=virtio --connect qemu:///system  --os-type linux \
         --os-variant sle15sp2 --arch aarch64 --noautoconsole --accelerate \
@@ -320,17 +340,17 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
     
     echo
     echo "Waiting till vgrbox installation finish"
-    while [ "$(virsh domstate vgrbox)" != "shut off" ];do sleep 60;done
+    while [ "$(sudo virsh domstate vgrbox)" != "shut off" ];do sleep 60;done
     
     echo 
     echo "Starting vgrbox for 2nd stage"
-    virsh start vgrbox
+    sudo virsh start vgrbox
     
     sleep 10
     
     echo
     echo "Waiting till vgrbox 2nd stage installation finish"
-    while [ "$(virsh domstate vgrbox)" != "shut off" ];do sleep 60;done
+    while [ "$(sudo virsh domstate vgrbox)" != "shut off" ];do sleep 60;done
     
     vagrant_box="$new_vagrant_box"
     echo "creating vagrant box $vagrant_box"
@@ -343,9 +363,9 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
     mv $qemu_default_pool/vgrbox.qcow2 $VAGRANT_HOME/boxes/$vagrant_box/0/libvirt/box.img
     
     if [ "$(arch)" == "x86_64" ];then
-        virsh undefine vgrbox
+        sudo virsh undefine vgrbox
     elif [ "$(arch)" == "aarch64" ];then
-        virsh undefine vgrbox --nvram
+        sudo virsh undefine vgrbox --nvram
     fi
 
     
@@ -356,7 +376,7 @@ if [ -z "$vagrant_box" ] && [ -z "$(vagrant box list | grep -w $new_vagrant_box)
     
     ln -s $VAGRANT_HOME/boxes/$vagrant_box/0/libvirt/box.img $qemu_default_pool/${vagrant_box}_vagrant_box_image_0.img
     
-    systemctl restart libvirtd
+    sudo systemctl restart libvirtd
     
     rm -f /srv/www/htdocs/autoyast_{intel,aarch64}.xml
 else
@@ -405,7 +425,7 @@ then
     
     for node in ${nodes_list[@]}
     do
-        virsh start ${project}_${node}
+        sudo virsh start ${project}_${node}
     done
     
     wait_for_health_ok
@@ -447,7 +467,7 @@ then
     done
 fi
 
-failed_scripts="$(virsh snapshot-list --name ${project}_master | grep -v deployment)"
+failed_scripts="$(sudo virsh snapshot-list --name ${project}_master | grep -v deployment)"
 if [ -z "$failed_scripts" ];then
     exit 0
 else
