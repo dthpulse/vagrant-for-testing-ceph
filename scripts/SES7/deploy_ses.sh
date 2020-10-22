@@ -29,7 +29,8 @@ do
 done
 
 ceph-salt config /ssh generate
-ceph-salt config /time_server/server_hostname set "$master"
+ceph-salt config /time_server/servers set "$master"
+ceph-salt config /time_server/subnet set "192.168.122.0/24"
 ceph-salt config /time_server/external_servers add "ntp.suse.cz"
 ceph-salt config /cephadm_bootstrap/dashboard/username set admin
 ceph-salt config /cephadm_bootstrap/dashboard/password set admin
