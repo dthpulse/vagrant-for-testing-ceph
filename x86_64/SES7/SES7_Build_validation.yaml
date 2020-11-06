@@ -15,7 +15,7 @@ deploy_ses: true
 # You can set SLE registration key from CLI as system environment variable:
 # export sle_reg_key="28738@C3P1G-EXe-eLq7-8eoqehc57v"
 # If kept empty SLE servers will not be registered and updated
-sle_reg_key: 'deedc51104e549deb'
+sle_reg_key:
 
 # SES registration key
 # You can set SES registration key from CLI as system environment variable:
@@ -25,7 +25,7 @@ ses_reg_key:
 
 # NTP server
 # if kept empty then ntp.suse.cz is configured on the VMs
-ntp_server: ntp.suse.cz
+ntp_server: 
 
 # Allow vendor change
 # In this case the package manager will not ask permission to change vendor for packages, and updating will just install whatever package has the highest version number, regardless of where it comes from.
